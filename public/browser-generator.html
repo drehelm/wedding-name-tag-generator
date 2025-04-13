@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wedding Name Tag Generator - Browser Edition (v1.1.0)</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="browser-generator.css">
+    <!-- OpenJSCAD dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@jscad/modeling@2.10.0/dist/modeling.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jscad/regl-renderer@2.6.1/dist/regl-renderer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jscad/io@2.4.4/dist/io.min.js"></script>
+    <!-- STIX Two Text Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@700&display=swap" rel="stylesheet">
+    <meta name="version" content="1.1.0">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wedding Name Tag Generator</h1>
+            <p>Create personalized drink clip name tags directly in your browser</p>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="nameForm">
+                    <div class="input-group">
+                        <div class="label-with-count">
+                            <label for="nameList">Enter Names (one per line):</label>
+                            <span id="charCount">0/14 characters</span>
+                        </div>
+                        <textarea id="nameList" rows="10" placeholder="JOHN&#10;JANE&#10;ALEX&#10;TAYLOR"></textarea>
+                        <div id="validationFeedback" class="validation-feedback"></div>
+                        <div class="name-guidelines">
+                            <h3>Name Guidelines:</h3>
+                            <ul>
+                                <li>Names are automatically converted to uppercase</li>
+                                <li>Maximum 14 characters per name (shorter names display better)</li>
+                                <li>Only letters, numbers, spaces and hyphens allowed</li>
+                                <li>One name per line</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-container">
+                        <h3>Preview:</h3>
+                        <div id="modelPreview" class="model-preview">
+                            <div id="previewPlaceholder" class="preview-placeholder">
+                                Enter a name and click "Preview" to see the 3D model
+                            </div>
+                            <canvas id="previewCanvas"></canvas>
+                        </div>
+                        <div class="preview-controls">
+                            <button type="button" id="previewBtn" class="preview-btn">Preview First Name</button>
+                            <div class="view-controls">
+                                <button type="button" id="rotateBtn" class="control-btn">Rotate</button>
+                                <button type="button" id="resetViewBtn" class="control-btn">Reset View</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button type="button" id="validateBtn" class="validate-btn">Validate Names</button>
+                        <button type="button" id="generateBtn" class="generate-btn" disabled>Generate STL Files</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="processingStatus" class="processing-status" style="display: none;">
+                <div class="status-message">
+                    <div class="spinner"></div>
+                    <div id="statusText">Processing...</div>
+                </div>
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+            </div>
+            
+            <div class="features-comparison">
+                <h2>Browser Edition vs. Traditional Workflow</h2>
+                <div class="comparison-grid">
+                    <div class="comparison-item">
+                        <h3>Browser Edition (New!)</h3>
+                        <ul>
+                            <li>✅ No software installation needed</li>
+                            <li>✅ Generate STL files directly</li>
+                            <li>✅ Instant preview of your designs</li>
+                            <li>✅ Works on any modern browser</li>
+                            <li>❗ More resource-intensive for many names</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-item">
+                        <h3>Traditional Method</h3>
+                        <ul>
+                            <li>❗ Requires Python and OpenSCAD installation</li>
+                            <li>❗ Multiple steps to generate files</li>
+                            <li>✅ More robust for large batches</li>
+                            <li>✅ More customization options</li>
+                            <li>✅ Lower computer resource usage</li>
+                        </ul>
+                        <a href="index.html" class="traditional-link">Switch to Traditional Method</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <h2>How It Works</h2>
+                <ol>
+                    <li>Enter your names (one per line)</li>
+                    <li>Click "Preview" to see how the first name will look</li>
+                    <li>Click "Validate Names" to check all names for errors</li>
+                    <li>Click "Generate STL Files" to create downloadable 3D models</li>
+                    <li>Send the STL files to your 3D printer</li>
+                </ol>
+            </div>
+        </main>
+
+        <footer>
+            <div class="version-info">Version 1.1.0</div>
+            <p>Based on <a href="https://github.com/drehelm/wedding-name-tag-generator" target="_blank">Name Tag Generator</a> | <a href="https://github.com/drehelm/wedding-name-tag-generator" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <!-- App-specific scripts -->
+    <script src="js/openjscad/clip-model.js"></script>
+    <script src="js/openjscad/text-generator.js"></script>
+    <script src="js/openjscad/stl-generator.js"></script>
+    <script src="browser-generator.js"></script>
+</body>
+</html>

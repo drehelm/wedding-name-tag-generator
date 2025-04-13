@@ -1,137 +1,97 @@
-# 🍷 Wedding Drink Name Tag Generator
+# Wedding Name Tag Generator
 
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Ready-brightgreen)](GITHUB_PAGES_DEPLOYMENT.md)
-[![3D Printing](https://img.shields.io/badge/3D%20Printing-Ready-blue)](https://www.printables.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Create personalized drink clip name tags for weddings and events, using a simple web interface.
 
-<p align="center">
-  <img src="https://via.placeholder.com/800x400?text=Wedding+Name+Tag+Example" alt="Name Tag Example" width="600"/>
-</p>
+![Wedding Name Tag Generator](images/preview.png)
 
-## 🎯 Overview
+## Two Ways to Generate Name Tags
 
-Custom 3D printable name tags for wedding seat placements - easily generate dozens of personalized tags without manually editing each one! Perfect for weddings, parties, or any event where you need to label glasses.
+This project now offers two different methods for generating name tags:
 
-## 🌟 New: Web Interface Available!
+### 1. Browser-Only Method (New!)
 
-**Try the web interface** to create your name tags without editing any code!
-- Simply enter names (one per line)
-- Click "Generate"
-- Download a ready-to-use package
-- [Deploy to GitHub Pages](GITHUB_PAGES_DEPLOYMENT.md) to host your own copy
+Generate STL files directly in your browser without installing any software:
 
-## 📖 The Story
+- **✅ No software installation needed**
+- **✅ Instant 3D preview**
+- **✅ Direct STL download**
+- **✅ Works on any modern browser**
 
-> My sister is getting married and she asked me to make a bunch of name tags for seat placements. I saw the cool project by [@LarsPrintingSolution](https://www.printables.com/model/286409-individual-nametag-for-glasses-and-cups-wedding-de) however I wasn't going to manually make and edit dozens of names.
->
-> So I made my very first OpenSCAD project... it combines an SVG I made and some rather manual shifting of the letters for a very specific font ("STIX Two Text") to come up with this model.
->
-> And then I wrote a little Python script that goes and generates the whole list of names for me and outputs the STL's.
->
-> A few hours of work to save me a couple hours of work? Worth it! 😂
+Simply enter your names, preview the result, and download the ready-to-print STL files.
 
-## 🚀 Quick Start
+### 2. Traditional Method
 
-### Option 1: Use the Web Interface (Easiest)
-1. Visit the web interface (or [deploy your own](GITHUB_PAGES_DEPLOYMENT.md))
-2. Enter names (one per line)
-3. Download the ZIP file and follow the instructions
+Generate name tags using Python and OpenSCAD:
 
-### Option 2: Manual Setup (Advanced)
+- **✅ More customization options**
+- **✅ Better for large batches**
+- **✅ Consistent results**
+- **❗ Requires Python and OpenSCAD installation**
 
-#### ✅ Prerequisites
+## How to Use the Browser-Only Method
 
-| Requirement | Download Link | Notes |
-|-------------|---------------|-------|
-| OpenSCAD | [Download](https://www.openscad.org/downloads.html) | For generating 3D models |
-| Python 3 | [Download](https://www.python.org/downloads/) | Windows users: Check "Add Python to PATH" |
-| STIX Two Text Font | [Download](https://fonts.google.com/specimen/STIX+Two+Text) | Required for text rendering |
+1. Visit the [Browser Edition](browser-generator.html) page
+2. Enter the names you want to create tags for
+3. Click "Preview" to see a 3D preview of your name tag
+4. Click "Validate Names" to check all names for errors
+5. Click "Generate STL Files" to create and download the STL files
+6. Print the downloaded STL files on your 3D printer
 
-#### 📁 Project Files
+## How to Use the Traditional Method
 
-Download and place these files in a single folder:
-- `generateNames.py` - Python script to generate STL files
-- `templatev2.scad` - OpenSCAD template
-- `Clip1.svg` - SVG clip design
+1. Enter the names you want to create tags for
+2. Click "Generate" to download a ZIP file containing:
+   - `generateNames.py` - Python script to generate all name tags
+   - `templatev2.scad` - OpenSCAD template file
+   - `Clip1.svg` - Clip design
+   - `README.md` - Instructions
 
-#### 📋 Step-by-Step Instructions
+3. Install required software:
+   - [OpenSCAD](https://www.openscad.org/downloads.html)
+   - [Python 3](https://www.python.org/downloads/)
+   - [STIX Two Text Font](https://fonts.google.com/specimen/STIX+Two+Text)
 
-1. **Install the Prerequisites** 
-   - Install OpenSCAD, Python 3, and the STIX Two Text font
-
-2. **Add Your Names**
-   - Open `generateNames.py` in a text editor
-   - Replace the example names with your own:
-     ```python
-     names = [ "JOHN", "JANE", "ALEX", "TAYLOR" ]
-     ```
-   - **Tip:** Names work best in ALL CAPS
-
-3. **Test Your Setup**
-   
-   **Mac/Linux:**
-   ```bash
-   cd ~/path/to/folder
-   python3 generateNames.py test
+4. Run the Python script to generate STL files:
    ```
-   
-   **Windows:**
-   ```bash
-   cd C:\path\to\folder
-   python generateNames.py test
-   ```
-
-4. **Generate Your Name Tags**
-   
-   **Mac/Linux:**
-   ```bash
-   python3 generateNames.py
-   ```
-   
-   **Windows:**
-   ```bash
    python generateNames.py
    ```
 
-5. **Check Your Output**
-   - STL files will be created in the `output_stls` folder
-   - Each name will have its own STL file
+5. Print the generated STL files
 
-## 🖨️ Printing Instructions
+## Technical Details
 
-| Setting | Recommendation |
-|---------|----------------|
-| Material | PETG (more springy than PLA) |
-| Scale | 70% (for standard wine glasses) |
-| Infill | 30% |
-| Layer Height | 0.2mm |
-| Printer Used | Prusa MK4 |
+The browser-based generator uses:
+- OpenJSCAD for 3D modeling
+- Client-side JavaScript for STL generation
+- WebGL for 3D preview
 
-I managed to fit about 12-16 tags on the bed at a time.
+The traditional method uses:
+- Python for name processing
+- OpenSCAD for 3D modeling
 
-## 🛠️ Troubleshooting
+## Requirements
 
-| Problem | Solution |
-|---------|----------|
-| OpenSCAD not found | Verify it's installed. On Mac, check `/Applications/OpenSCAD.app` |
-| Python not recognized | Reinstall Python 3 and ensure "Add Python to PATH" is selected (Windows) |
-| Font not working | Ensure STIX Two Text is installed properly. Restart OpenSCAD if necessary |
-| Permission denied | Try running the terminal as Administrator (Windows) or sudo (Mac/Linux) |
+### Browser Method
+- Modern web browser with WebGL support
+- Sufficient RAM for browser-based 3D operations
 
-## 🤝 Contributing
+### Traditional Method
+- OpenSCAD 2021.01 or later
+- Python 3.6 or later
+- STIX Two Text Font (Bold)
 
-Contributions are welcome! Feel free to:
-- Submit bug reports
-- Suggest enhancements
-- Create pull requests
-- Share your customizations
+## Browser Compatibility
 
-## 📄 License
+The browser-based generator has been tested with:
+- Chrome 100+
+- Firefox 100+
+- Edge 100+
+- Safari 15+
+
+## Contributing
+
+Contributions are welcome! See [DEVELOPMENT_WORKFLOW.md](DEVELOPMENT_WORKFLOW.md) for details on how to contribute to this project.
+
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Inspired by [@LarsPrintingSolution](https://www.printables.com/model/286409-individual-nametag-for-glasses-and-cups-wedding-de)
-- Original project by [@ahelmer](https://github.com/ahelmer)
-- Web interface added in 2025
