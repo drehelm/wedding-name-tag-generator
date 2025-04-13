@@ -17,14 +17,17 @@ function createNameTag(name) {
 
 // Function to generate STL binary data for a name tag
 function generateSTL(name) {
-  // Get the serialization functions
-  const { stlSerializer } = jscadIo;
+  // Access the JSCAD IO library correctly - it's exposed as a global object
+  // with a different name from what we were using
+  if (typeof io === 'undefined' || !io.stl) {
+    throw new Error('JSCAD IO library not loaded or STL serializer not available');
+  }
   
   // Create the name tag model
   const nameTagModel = createNameTag(name);
   
-  // Convert the model to STL binary format
-  return stlSerializer.serialize({ binary: true }, nameTagModel);
+  // Convert the model to STL binary format using the correct API
+  return io.stl.serialize({ binary: true }, nameTagModel);
 }
 
 // Function to generate and initiate download of an STL file

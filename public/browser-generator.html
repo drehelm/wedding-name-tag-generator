@@ -6,10 +6,12 @@
     <title>Wedding Name Tag Generator - Browser Edition (v1.1.0)</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="browser-generator.css">
-    <!-- OpenJSCAD dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/@jscad/modeling@2.10.0/dist/modeling.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@jscad/regl-renderer@2.6.1/dist/regl-renderer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@jscad/io@2.4.4/dist/io.min.js"></script>
+    <!-- OpenJSCAD dependencies - updated with correct libraries and order -->
+    <script src="https://unpkg.com/@jscad/modeling@2.11.0/dist/jscad-modeling.min.js"></script>
+    <script src="https://unpkg.com/@jscad/regl-renderer@2.6.4/dist/jscad-regl-renderer.min.js"></script>
+    <!-- STL format serializer as a standalone library -->
+    <script src="https://unpkg.com/@jscad/io@2.4.4/dist/io.min.js"></script>
+    <script src="https://unpkg.com/@jscad/io@2.4.4/dist/formats/stl/index.js"></script>
     <!-- STIX Two Text Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -122,6 +124,34 @@
             <p>Based on <a href="https://github.com/drehelm/wedding-name-tag-generator" target="_blank">Name Tag Generator</a> | <a href="https://github.com/drehelm/wedding-name-tag-generator" target="_blank">GitHub Repository</a></p>
         </footer>
     </div>
+
+    <!-- Define globals for easier library access -->
+    <script>
+        // Create global references to make library access easier
+        let jscadModeling;
+        let jscadReglRenderer;
+        
+        // Set up library references once loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Assign JSCAD library references to our global variables
+            if (window.jscad && window.jscad.modeling) {
+                jscadModeling = window.jscad.modeling;
+            } else {
+                console.error('JSCAD modeling library not found');
+            }
+            
+            if (window.jscad && window.jscad.reglRenderer) {
+                jscadReglRenderer = window.jscad.reglRenderer;
+            } else {
+                console.error('JSCAD regl-renderer library not found');
+            }
+            
+            // Check STL serializer
+            if (!window.io || !window.io.stl) {
+                console.error('JSCAD STL serializer not available');
+            }
+        });
+    </script>
 
     <!-- App-specific scripts -->
     <script src="js/openjscad/clip-model.js"></script>
