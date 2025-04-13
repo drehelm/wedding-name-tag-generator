@@ -2,6 +2,11 @@
   "name": "wedding-name-tag-generator",
   "version": "1.0.0",
   "description": "Web-based generator for 3D printable wedding name tags",
+  "homepage": "https://drehelm.github.io/wedding-name-tag-generator",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drehelm/wedding-name-tag-generator.git"
+  },
   "scripts": {
     "dev": "serve public",
     "build": "node build.js",
@@ -15,7 +20,7 @@
     "openscad",
     "customizer"
   ],
-  "author": "",
+  "author": "drehelm",
   "license": "MIT",
   "dependencies": {
     "jszip": "^3.10.1"
@@ -24,5 +29,8 @@
     "fs-extra": "^11.1.1",
     "gh-pages": "^5.0.0",
     "serve": "^14.2.0"
+  },
+  "bugs": {
+    "url": "https://github.com/drehelm/wedding-name-tag-generator/issues"
   }
 }
