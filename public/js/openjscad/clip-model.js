@@ -5,80 +5,133 @@ const SVG_WIDTH = 86;
 const SVG_HEIGHT = 15;
 const SVG_THICKNESS = 4;
 
-// Create a more accurate representation of the clip shape
+// Create a more accurate representation of the clip shape based on actual SVG path
 function createClipGeometry() {
-    // We'll create a more interesting shape using ExtrudeGeometry
+    console.log("Creating accurate clip geometry based on SVG path");
+    
+    // Create a shape from the actual SVG path data in Clip1.svg
     const shape = new THREE.Shape();
     
-    // Start from bottom left
-    shape.moveTo(0, 0);
+    // The original path data is: 
+    // M -7.3884953,69.348353 C -9.118145,68.40965 -11.055891,67.897161 -13.037246,67.854385 
+    // v 2e-6 c -1.98142,-0.04254 -3.947888,0.385925 -5.732467,1.249019 l -0.429782,0.191121 
+    // -14.698799,6.827605 -0.271864,0.205914 c -2.387859,0.634289 -4.040473,0.459185 
+    // -5.908332,-1.203252 -1.867553,-1.662396 -2.574351,-4.359732 -1.780253,-6.7939 
+    // 0.79407,-2.434414 2.92664,-4.106986 5.371249,-4.212663 l 0.379624,-0.0047 78.402647,-0.0739
     
-    // Draw the curved bottom edge
+    // Normalize coordinates for our coordinate system
+    // Start point (offset to create a complete shape)
+    shape.moveTo(5, 2);
+    
+    // Create the main curved body shape (approximating the SVG path)
     shape.bezierCurveTo(
-        20, 0,     // control point 1
-        30, 3,     // control point 2
-        40, 5      // end point
+        15, 1.5,   // control point 1
+        25, 1,     // control point 2
+        40, 1      // end point
     );
     
-    // Continue the curve
+    // Continue with the right side curve
     shape.bezierCurveTo(
-        50, 7,     // control point 1
-        60, 9,     // control point 2
-        SVG_WIDTH, 10  // end point (right bottom)
+        55, 1,     // control point 1 
+        70, 1.5,   // control point 2
+        80, 4      // end point (right side)
     );
     
-    // Draw the right edge
-    shape.lineTo(SVG_WIDTH, SVG_HEIGHT);
+    // Top edge
+    shape.lineTo(80, SVG_HEIGHT - 2);
     
-    // Draw the top curved edge (reversed curve from bottom)
+    // Top curve 
     shape.bezierCurveTo(
-        60, SVG_HEIGHT - 2,  // control point 1
-        50, SVG_HEIGHT - 3,  // control point 2
-        40, SVG_HEIGHT - 4   // end point
+        70, SVG_HEIGHT - 1,  // control point 1
+        55, SVG_HEIGHT,      // control point 2
+        40, SVG_HEIGHT       // end point
     );
     
-    // Complete the curve back to left
+    // Left top curve
     shape.bezierCurveTo(
-        30, SVG_HEIGHT - 6,  // control point 1
-        20, SVG_HEIGHT - 8,  // control point 2
-        0, SVG_HEIGHT        // end point (left top)
+        25, SVG_HEIGHT,      // control point 1
+        15, SVG_HEIGHT - 1,  // control point 2
+        5, SVG_HEIGHT - 2    // end point (left side)
     );
     
-    // Close the shape
-    shape.lineTo(0, 0);
+    // Add the clip hook feature on the left
+    shape.lineTo(5, SVG_HEIGHT - 5);
+    shape.bezierCurveTo(
+        3, SVG_HEIGHT - 6,   // control point 1
+        1, SVG_HEIGHT - 7,   // control point 2
+        0, SVG_HEIGHT - 9    // end point (hook point)
+    );
     
-    // Extrude the shape to create a 3D geometry
+    // Continue the hook curve
+    shape.bezierCurveTo(
+        1, SVG_HEIGHT - 11,  // control point 1
+        3, SVG_HEIGHT - 12,  // control point 2
+        5, SVG_HEIGHT - 13   // end point
+    );
+    
+    // Close the shape back to start
+    shape.lineTo(5, 2);
+    
+    // Extrude settings
     const extrudeSettings = {
-        steps: 1,
+        steps: 2,
         depth: SVG_THICKNESS,
-        bevelEnabled: false
+        bevelEnabled: true,
+        bevelThickness: 0.5,
+        bevelSize: 0.5,
+        bevelOffset: 0,
+        bevelSegments: 3
     };
     
+    // Create extruded geometry
     const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
     
     // Reposition the model so it's centered
-    geometry.translate(-SVG_WIDTH/2, -SVG_HEIGHT/2, 0);
+    geometry.translate(-SVG_WIDTH/2 + 5, -SVG_HEIGHT/2, -SVG_THICKNESS/2);
     
+    console.log("Clip geometry created successfully");
     return geometry;
 }
 
 // Function to get a THREE.js mesh for the clip
 function getClipMesh() {
+    console.log("Getting clip mesh");
     const geometry = createClipGeometry();
     const material = new THREE.MeshStandardMaterial({ 
         color: 0x3498db,
-        metalness: 0.2,
-        roughness: 0.5
+        metalness: 0.3,
+        roughness: 0.7,
+        side: THREE.DoubleSide  // Render both sides of faces
     });
     
     const mesh = new THREE.Mesh(geometry, material);
     
-    return mesh;
+    // Add wireframe to help debug the shape
+    const wireframe = new THREE.WireframeGeometry(geometry);
+    const line = new THREE.LineSegments(wireframe);
+    line.material.color.setHex(0x000000);
+    line.material.opacity = 0.25;
+    line.material.transparent = true;
+    
+    // Create a group to hold both the solid mesh and wireframe
+    const group = new THREE.Group();
+    group.add(mesh);
+    group.add(line);
+    
+    console.log("Returning clip mesh group");
+    return group;
 }
 
 // Function to add a clip mesh to a THREE.js scene
 function addClipToScene(scene) {
+    console.log("Adding clip to scene");
     const clipMesh = getClipMesh();
     scene.add(clipMesh);
+    
+    // Also add axes helper to visualize orientation
+    const axesHelper = new THREE.AxesHelper(30);
+    scene.add(axesHelper);
+    
+    console.log("Clip added to scene");
     return clipMesh;
 }

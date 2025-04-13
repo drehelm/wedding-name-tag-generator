@@ -1,41 +1,47 @@
 // stl-generator.js - Generates STL files for name tags using THREE.js
 
 // Function to create a complete name tag scene
-async function createNameTagScene(name) {
+function createNameTagScene(name) {
+  console.log("Creating name tag scene for:", name);
+  
   // Create a new THREE.js scene
   const scene = new THREE.Scene();
   
   // Add lighting for better visualization
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambientLight);
   
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(50, 50, 50);
   scene.add(directionalLight);
   
+  const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+  directionalLight2.position.set(-50, -50, 50);
+  scene.add(directionalLight2);
+  
   // Add the clip to the scene
+  console.log("Adding clip to name tag scene");
   const clipMesh = addClipToScene(scene);
   
   // Add the text to the scene, positioned on top of the clip
+  console.log("Adding text to name tag scene");
   const textGroup = addTextToScene(scene, name);
   
-  // Position text on the clip's top surface
-  textGroup.position.z = SVG_THICKNESS;
-  
-  // Wait for the text to fully load (approximate delay)
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
+  console.log("Name tag scene created successfully");
   return scene;
 }
 
 // Function to generate STL binary data for a name tag
-async function generateSTL(name) {
+function generateSTL(name) {
   try {
-    // Create the name tag scene (with await for text loading)
-    const nameTagScene = await createNameTagScene(name);
+    console.log("Generating STL for name:", name);
+    
+    // Create the name tag scene
+    const nameTagScene = createNameTagScene(name);
     
     // Check if the THREE.STLExporter is available
     if (!THREE.STLExporter) {
+      console.error("THREE.STLExporter not available");
       throw new Error('THREE.STLExporter not available. Make sure THREE.js STLExporter is properly loaded.');
     }
     
@@ -43,8 +49,10 @@ async function generateSTL(name) {
     const exporter = new THREE.STLExporter();
     
     // Export the scene to STL (binary format)
+    console.log("Exporting scene to STL");
     const stlData = exporter.parse(nameTagScene, { binary: true });
     
+    console.log("STL generation complete");
     return stlData;
   } catch (error) {
     console.error('Error generating STL:', error);
@@ -53,10 +61,12 @@ async function generateSTL(name) {
 }
 
 // Function to generate and initiate download of an STL file
-async function downloadSTL(name) {
+function downloadSTL(name) {
   try {
-    // Generate STL binary data (with await)
-    const stlData = await generateSTL(name);
+    console.log("Starting STL download for name:", name);
+    
+    // Generate STL binary data
+    const stlData = generateSTL(name);
     
     // Create a Blob from the STL data
     const blob = new Blob([stlData], { type: 'application/octet-stream' });
@@ -79,6 +89,7 @@ async function downloadSTL(name) {
       URL.revokeObjectURL(url);
     }, 100);
     
+    console.log("STL download complete");
     return { success: true };
   } catch (error) {
     console.error('Error downloading STL:', error);
@@ -88,83 +99,101 @@ async function downloadSTL(name) {
 
 // Function to create a THREE.js scene for preview with better positioning
 function createPreviewScene(name) {
-  // We can't use await here since this function is called synchronously,
-  // but our text-generator will handle loading and replacing the placeholder
+  console.log("Creating preview scene for name:", name);
+  
   const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
   
   // Add lighting for better visualization
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambientLight);
   
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(50, 50, 50);
   scene.add(directionalLight);
   
+  const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+  directionalLight2.position.set(-50, -50, 50);
+  scene.add(directionalLight2);
+  
   // Add the clip to the scene
+  console.log("Adding clip to preview scene");
   const clipMesh = addClipToScene(scene);
   
   // Add the text to the scene, positioned on top of the clip
+  console.log("Adding text to preview scene");
   const textGroup = addTextToScene(scene, name);
   
-  // Position text on the clip's top surface
-  textGroup.position.z = SVG_THICKNESS;
+  // Add a grid helper for better visualization
+  const gridHelper = new THREE.GridHelper(100, 10);
+  gridHelper.rotation.x = Math.PI / 2;
+  gridHelper.position.z = -5;
+  scene.add(gridHelper);
   
   // Adjust the camera angle by positioning the model
-  scene.rotation.x = -Math.PI / 8; // Tilt slightly to show the 3D aspect better
+  scene.rotation.x = -Math.PI / 6; // Tilt to show the 3D aspect better
   
+  console.log("Preview scene created successfully");
   return scene;
 }
 
 // Function to process multiple names and generate STL files
-async function processNames(names, progressCallback) {
+function processNames(names, progressCallback) {
+  console.log("Processing multiple names:", names);
+  
   // Array to collect any errors
   const errors = [];
   
-  // Process each name
-  for (let i = 0; i < names.length; i++) {
-    const name = names[i];
-    
-    try {
-      // Update progress
-      if (progressCallback) {
-        progressCallback({
-          current: i + 1,
-          total: names.length,
-          name: name,
-          status: 'processing'
-        });
-      }
+  // Process each name sequentially using promises
+  return new Promise(async (resolve) => {
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i];
       
-      // Generate and download the STL
-      const result = await downloadSTL(name);
-      
-      if (!result.success) {
-        throw new Error(result.error.message || 'Unknown error');
-      }
-      
-      // Short delay to prevent overwhelming the browser
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-      console.error(`Error processing name "${name}":`, error);
-      errors.push({ name, error: error.message || 'Unknown error' });
-      
-      // Update progress with error
-      if (progressCallback) {
-        progressCallback({
-          current: i + 1,
-          total: names.length,
-          name: name,
-          status: 'error',
-          error: error.message || 'Unknown error'
-        });
+      try {
+        // Update progress
+        if (progressCallback) {
+          progressCallback({
+            current: i + 1,
+            total: names.length,
+            name: name,
+            status: 'processing'
+          });
+        }
+        
+        console.log(`Processing name ${i+1}/${names.length}: ${name}`);
+        
+        // Generate and download the STL
+        const result = await downloadSTL(name);
+        
+        if (!result.success) {
+          throw new Error(result.error.message || 'Unknown error');
+        }
+        
+        // Short delay to prevent overwhelming the browser
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(`Error processing name "${name}":`, error);
+        errors.push({ name, error: error.message || 'Unknown error' });
+        
+        // Update progress with error
+        if (progressCallback) {
+          progressCallback({
+            current: i + 1,
+            total: names.length,
+            name: name,
+            status: 'error',
+            error: error.message || 'Unknown error'
+          });
+        }
       }
     }
-  }
-  
-  // Return summary of processing
-  return {
-    total: names.length,
-    successful: names.length - errors.length,
-    errors: errors
-  };
+    
+    // Return summary of processing
+    console.log("Names processing complete. Successful:", names.length - errors.length, "Errors:", errors.length);
+    resolve({
+      total: names.length,
+      successful: names.length - errors.length,
+      errors: errors
+    });
+  });
 }
