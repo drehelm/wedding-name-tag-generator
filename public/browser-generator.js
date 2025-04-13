@@ -204,8 +204,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Preview button click handler
-    previewBtn.addEventListener('click', function() {
+    // Preview button click handler - Now using async/await for font loading
+    previewBtn.addEventListener('click', async function() {
         const names = nameList.value.trim().split('\n').filter(name => name.trim() !== '');
         
         if (names.length === 0) {
@@ -227,7 +227,8 @@ document.addEventListener('DOMContentLoaded', function() {
             resetScene();
             
             // Create the preview scene using our stl-generator.js function
-            const previewScene = createPreviewScene(nameToPreview);
+            // This is now an async function that returns a Promise
+            const previewScene = await createPreviewScene(nameToPreview);
             
             // Import objects from the preview scene to our main scene
             if (previewScene && previewScene.children) {

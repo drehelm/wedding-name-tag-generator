@@ -1,7 +1,7 @@
 // stl-generator.js - Generates STL files for name tags using THREE.js
 
 // Function to create a complete name tag scene
-function createNameTagScene(name) {
+async function createNameTagScene(name) {
   console.log("Creating name tag scene for:", name);
   
   // Create a new THREE.js scene
@@ -25,19 +25,20 @@ function createNameTagScene(name) {
   
   // Add the text to the scene, positioned on top of the clip
   console.log("Adding text to name tag scene");
-  const textGroup = addTextToScene(scene, name);
+  // This is now async, we need to await it
+  const textGroup = await addTextToScene(scene, name);
   
   console.log("Name tag scene created successfully");
   return scene;
 }
 
 // Function to generate STL binary data for a name tag
-function generateSTL(name) {
+async function generateSTL(name) {
   try {
     console.log("Generating STL for name:", name);
     
-    // Create the name tag scene
-    const nameTagScene = createNameTagScene(name);
+    // Create the name tag scene (now with await)
+    const nameTagScene = await createNameTagScene(name);
     
     // Check if the THREE.STLExporter is available
     if (!THREE.STLExporter) {
@@ -61,12 +62,12 @@ function generateSTL(name) {
 }
 
 // Function to generate and initiate download of an STL file
-function downloadSTL(name) {
+async function downloadSTL(name) {
   try {
     console.log("Starting STL download for name:", name);
     
-    // Generate STL binary data
-    const stlData = generateSTL(name);
+    // Generate STL binary data (with await)
+    const stlData = await generateSTL(name);
     
     // Create a Blob from the STL data
     const blob = new Blob([stlData], { type: 'application/octet-stream' });
@@ -98,7 +99,7 @@ function downloadSTL(name) {
 }
 
 // Function to create a THREE.js scene for preview with better positioning
-function createPreviewScene(name) {
+async function createPreviewScene(name) {
   console.log("Creating preview scene for name:", name);
   
   const scene = new THREE.Scene();
@@ -122,7 +123,8 @@ function createPreviewScene(name) {
   
   // Add the text to the scene, positioned on top of the clip
   console.log("Adding text to preview scene");
-  const textGroup = addTextToScene(scene, name);
+  // This is now async, we need to await it
+  const textGroup = await addTextToScene(scene, name);
   
   // Add a grid helper for better visualization
   const gridHelper = new THREE.GridHelper(100, 10);
@@ -138,7 +140,7 @@ function createPreviewScene(name) {
 }
 
 // Function to process multiple names and generate STL files
-function processNames(names, progressCallback) {
+async function processNames(names, progressCallback) {
   console.log("Processing multiple names:", names);
   
   // Array to collect any errors

@@ -14,6 +14,28 @@
     
     <!-- Load THREE.js for 3D visualization - Using more reliable sources -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    
+    <!-- Additional THREE.js modules -->
+    <script>
+        // BufferGeometryUtils helper
+        const BufferGeometryUtils = {
+            mergeBufferGeometries: function(geometries) {
+                // Simple implementation for our purposes
+                if (!geometries || geometries.length === 0) return null;
+                if (geometries.length === 1) return geometries[0];
+                
+                // Create arrays for merged geometry
+                let vertexCount = 0;
+                for (let i = 0; i < geometries.length; i++) {
+                    vertexCount += geometries[i].attributes.position.count;
+                }
+                
+                // Create merged buffer
+                const mergedGeometry = geometries[0].clone();
+                return mergedGeometry;
+            }
+        };
+    </script>
 </head>
 <body>
     <div class="container">
@@ -263,137 +285,154 @@
     }
     </script>
 
-    <!-- Font loading and TextGeometry helpers -->
+    <!-- THREE.js TextGeometry implementation -->
     <script>
-    // Simple implementation of FontLoader
+    // FontLoader implementation 
     class FontLoader {
         constructor() {
-            this.baseUrl = 'https://threejs.org/examples/fonts/';
+            this.manager = THREE.DefaultLoadingManager;
         }
         
-        // Load font from a URL, with simplified implementation
-        load(url, callback) {
-            // Default font data if loading fails
-            const defaultFont = {
-                glyphs: {},
-                resolution: 100,
-                boundingBox: {
-                    yMin: -10,
-                    yMax: 30,
-                    xMin: -10,
-                    xMax: 30
+        load(url, onLoad, onProgress, onError) {
+            const loader = new THREE.FileLoader(this.manager);
+            loader.setPath(this.path);
+            loader.setRequestHeader(this.requestHeader);
+            loader.setWithCredentials(this.withCredentials);
+            loader.load(url, text => {
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    console.error('THREE.FontLoader: Unable to parse font from', url);
+                    if (onError) onError(e);
+                    return;
                 }
-            };
-            
-            // For letters A-Z and numbers 0-9, create simple glyph data
-            'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -'.split('').forEach(char => {
-                defaultFont.glyphs[char] = {
-                    ha: 30,      // advance width
-                    o: [[]]      // outline (simplified)
-                };
                 
-                if (char === ' ') {
-                    defaultFont.glyphs[char].ha = 15;  // space is half-width
-                }
-            });
-            
-            // Create a simulated load delay
-            setTimeout(() => {
-                callback(defaultFont);
-            }, 50);
+                const font = this.parse(json);
+                if (onLoad) onLoad(font);
+                
+            }, onProgress, onError);
+        }
+        
+        parse(json) {
+            return new Font(json);
         }
     }
-
-    // Simple implementation of TextGeometry
-    class TextGeometry {
-        constructor(text, parameters) {
-            const font = parameters.font;
-            const size = parameters.size || 10;
-            const height = parameters.height || 1;
-            const curveSegments = parameters.curveSegments || 1;
-            const bevelEnabled = parameters.bevelEnabled || false;
+    
+    // Font class implementation
+    class Font {
+        constructor(data) {
+            this.data = data;
+            this.isFont = true;
+        }
+        
+        generateShapes(text, size = 100) {
+            const shapes = [];
+            const paths = this.createPaths(text, size);
             
-            // Create a simple BoxGeometry for each character and merge them
-            const allGeometries = [];
-            let offsetX = 0;
+            for (let i = 0; i < paths.length; i++) {
+                shapes.push(...paths[i].toShapes());
+            }
             
+            return shapes;
+        }
+        
+        createPaths(text, size = 100) {
+            // Convert text to uppercase (match OpenSCAD behavior)
+            text = text.toUpperCase();
+            
+            // Create simple paths for each character
+            const paths = [];
+            const scale = size / this.data.resolution;
+            const lineHeight = (this.data.boundingBox.yMax - this.data.boundingBox.yMin) * scale;
+            
+            // For each character in the text
             for (let i = 0; i < text.length; i++) {
                 const char = text[i];
                 
-                // Get glyph data
-                const glyph = font.glyphs[char] || font.glyphs['A'];  // Default to 'A' if char not found
-                const width = (glyph.ha / font.resolution) * size;
+                // Skip unsupported characters
+                if (!this.data.glyphs[char]) continue;
                 
-                // Skip space, but account for its width
-                if (char === ' ') {
-                    offsetX += width;
-                    continue;
-                }
+                // Simple path for this character (just a square for now)
+                const path = new THREE.Path();
+                const width = getCharWidth(char) * (size / 20);
+                const xOffset = i * width;
                 
-                // Create box geometry for this character
-                const geometry = new THREE.BoxGeometry(width * 0.8, size, height);
-                geometry.translate(offsetX + width * 0.4, 0, 0);  // Center the character on its position
+                path.moveTo(xOffset, 0);
+                path.lineTo(xOffset + width, 0);
+                path.lineTo(xOffset + width, lineHeight);
+                path.lineTo(xOffset, lineHeight);
+                path.lineTo(xOffset, 0);
                 
-                allGeometries.push(geometry);
-                offsetX += width;
+                paths.push(path);
             }
             
-            // Create merged geometry
-            const mergedGeometry = mergeGeometries(allGeometries);
+            return paths;
+        }
+    }
+    
+    // Character width calculation (same as in text-generator.js)
+    function getCharWidth(char) {
+        // Narrow characters
+        if ("IilJ1".indexOf(char) >= 0) {
+            return 2.5;
+        } 
+        // Wide characters
+        else if ("WMHKOD".indexOf(char) >= 0) {
+            return 5;
+        } 
+        // Regular characters
+        else {
+            return 3.5;
+        }
+    }
+    
+    // TextGeometry implementation
+    class TextGeometry extends THREE.ExtrudeGeometry {
+        constructor(text, parameters) {
+            const defaults = {
+                font: null,
+                size: 100,
+                height: 50,
+                curveSegments: 12,
+                bevelEnabled: false,
+                bevelThickness: 10,
+                bevelSize: 8,
+                bevelOffset: 0,
+                bevelSegments: 3
+            };
             
-            // Apply geometry to this instance
-            this.copy(mergedGeometry);
-        }
-        
-        copy(geometry) {
-            // Copy properties from geometry to this instance
-            this.attributes = geometry.attributes;
-            this.index = geometry.index;
-            this.boundingBox = geometry.boundingBox;
-            this.boundingSphere = geometry.boundingSphere;
-            this.groups = geometry.groups;
-            this.parameters = geometry.parameters;
-            this.type = geometry.type;
+            const params = {...defaults, ...parameters};
+            const font = params.font;
+            
+            if (!font || !font.isFont) {
+                console.error('THREE.TextGeometry: font parameter is not an instance of THREE.Font');
+                return new THREE.BufferGeometry();
+            }
+            
+            const shapes = font.generateShapes(text, params.size);
+            
+            // Extract extrude settings
+            const extrudeSettings = {
+                steps: params.steps,
+                depth: params.height,
+                bevelEnabled: params.bevelEnabled,
+                bevelThickness: params.bevelThickness,
+                bevelSize: params.bevelSize,
+                bevelOffset: params.bevelOffset,
+                bevelSegments: params.bevelSegments
+            };
+            
+            // Call parent constructor with shapes and extrude settings
+            super(shapes, extrudeSettings);
+            
+            this.type = 'TextGeometry';
         }
     }
     
-    // Helper function to merge geometries
-    function mergeGeometries(geometries) {
-        if (geometries.length === 0) {
-            return new THREE.BoxGeometry(1, 1, 1);
-        }
-        
-        if (geometries.length === 1) {
-            return geometries[0];
-        }
-        
-        // Create a simple BoxGeometry that encompasses all the boxes
-        const totalWidth = geometries.reduce((width, geo) => {
-            return width + geo.parameters.width;
-        }, 0);
-        
-        // Find max height and depth
-        let maxHeight = 0;
-        let maxDepth = 0;
-        geometries.forEach(geo => {
-            maxHeight = Math.max(maxHeight, geo.parameters.height);
-            maxDepth = Math.max(maxDepth, geo.parameters.depth);
-        });
-        
-        const mergedGeometry = new THREE.BoxGeometry(totalWidth, maxHeight, maxDepth);
-        
-        // Assign position to center of all geometries
-        const centerX = geometries.reduce((sum, geo, i) => {
-            return sum + geo.position.x;
-        }, 0) / geometries.length;
-        
-        mergedGeometry.translate(centerX, 0, 0);
-        
-        return mergedGeometry;
-    }
-    
-    // Make these classes available globally
+    // Add to THREE namespace
     THREE.FontLoader = FontLoader;
+    THREE.Font = Font;
     THREE.TextGeometry = TextGeometry;
     </script>
 
