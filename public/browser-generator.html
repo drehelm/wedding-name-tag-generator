@@ -70,16 +70,6 @@
                     
                     <div class="preview-container">
                         <h3>Preview:</h3>
-                        <div id="renderMethod" class="render-selector">
-                            <label>
-                                <input type="radio" name="renderMethod" value="openscad" checked>
-                                OpenSCAD Rendering (Exact)
-                            </label>
-                            <label>
-                                <input type="radio" name="renderMethod" value="threejs">
-                                THREE.js Rendering (Fast)
-                            </label>
-                        </div>
                         <div id="modelPreview" class="model-preview">
                             <div id="previewPlaceholder" class="preview-placeholder">
                                 Enter a name and click "Preview" to see the 3D model
@@ -122,7 +112,7 @@
                             <li>✅ Generate STL files directly</li>
                             <li>✅ Instant preview of your designs</li>
                             <li>✅ Works on any modern browser</li>
-                            <li>✅ Now with OpenSCAD WASM support for exact rendering</li>
+                            <li>✅ SVG-based text rendering for accurate previews</li>
                             <li>❗ More resource-intensive for many names</li>
                         </ul>
                     </div>
@@ -299,157 +289,6 @@
     }
     </script>
 
-    <!-- THREE.js TextGeometry implementation -->
-    <script>
-    // FontLoader implementation 
-    class FontLoader {
-        constructor() {
-            this.manager = THREE.DefaultLoadingManager;
-        }
-        
-        load(url, onLoad, onProgress, onError) {
-            const loader = new THREE.FileLoader(this.manager);
-            loader.setPath(this.path);
-            loader.setRequestHeader(this.requestHeader);
-            loader.setWithCredentials(this.withCredentials);
-            loader.load(url, text => {
-                let json;
-                try {
-                    json = JSON.parse(text);
-                } catch (e) {
-                    console.error('THREE.FontLoader: Unable to parse font from', url);
-                    if (onError) onError(e);
-                    return;
-                }
-                
-                const font = this.parse(json);
-                if (onLoad) onLoad(font);
-                
-            }, onProgress, onError);
-        }
-        
-        parse(json) {
-            return new Font(json);
-        }
-    }
-    
-    // Font class implementation
-    class Font {
-        constructor(data) {
-            this.data = data;
-            this.isFont = true;
-        }
-        
-        generateShapes(text, size = 100) {
-            const shapes = [];
-            const paths = this.createPaths(text, size);
-            
-            for (let i = 0; i < paths.length; i++) {
-                shapes.push(...paths[i].toShapes());
-            }
-            
-            return shapes;
-        }
-        
-        createPaths(text, size = 100) {
-            // Convert text to uppercase (match OpenSCAD behavior)
-            text = text.toUpperCase();
-            
-            // Create simple paths for each character
-            const paths = [];
-            const scale = size / this.data.resolution;
-            const lineHeight = (this.data.boundingBox.yMax - this.data.boundingBox.yMin) * scale;
-            
-            // For each character in the text
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                
-                // Skip unsupported characters
-                if (!this.data.glyphs[char]) continue;
-                
-                // Simple path for this character (just a square for now)
-                const path = new THREE.Path();
-                const width = getCharWidth(char) * (size / 20);
-                const xOffset = i * width;
-                
-                path.moveTo(xOffset, 0);
-                path.lineTo(xOffset + width, 0);
-                path.lineTo(xOffset + width, lineHeight);
-                path.lineTo(xOffset, lineHeight);
-                path.lineTo(xOffset, 0);
-                
-                paths.push(path);
-            }
-            
-            return paths;
-        }
-    }
-    
-    // Character width calculation (same as in text-generator.js)
-    function getCharWidth(char) {
-        // Narrow characters
-        if ("IilJ1".indexOf(char) >= 0) {
-            return 2.5;
-        } 
-        // Wide characters
-        else if ("WMHKOD".indexOf(char) >= 0) {
-            return 5;
-        } 
-        // Regular characters
-        else {
-            return 3.5;
-        }
-    }
-    
-    // TextGeometry implementation
-    class TextGeometry extends THREE.ExtrudeGeometry {
-        constructor(text, parameters) {
-            const defaults = {
-                font: null,
-                size: 100,
-                height: 50,
-                curveSegments: 12,
-                bevelEnabled: false,
-                bevelThickness: 10,
-                bevelSize: 8,
-                bevelOffset: 0,
-                bevelSegments: 3
-            };
-            
-            const params = {...defaults, ...parameters};
-            const font = params.font;
-            
-            if (!font || !font.isFont) {
-                console.error('THREE.TextGeometry: font parameter is not an instance of THREE.Font');
-                return new THREE.BufferGeometry();
-            }
-            
-            const shapes = font.generateShapes(text, params.size);
-            
-            // Extract extrude settings
-            const extrudeSettings = {
-                steps: params.steps,
-                depth: params.height,
-                bevelEnabled: params.bevelEnabled,
-                bevelThickness: params.bevelThickness,
-                bevelSize: params.bevelSize,
-                bevelOffset: params.bevelOffset,
-                bevelSegments: params.bevelSegments
-            };
-            
-            // Call parent constructor with shapes and extrude settings
-            super(shapes, extrudeSettings);
-            
-            this.type = 'TextGeometry';
-        }
-    }
-    
-    // Add to THREE namespace
-    THREE.FontLoader = FontLoader;
-    THREE.Font = Font;
-    THREE.TextGeometry = TextGeometry;
-    </script>
-
     <!-- Inline STL Export function to avoid issues with external dependencies -->
     <script>
     // STL Export implementation
@@ -583,9 +422,8 @@
 
     <!-- App-specific scripts -->
     <script src="js/openjscad/clip-model.js"></script>
-    <script src="js/openjscad/text-generator.js"></script>
+    <script src="js/svg-text-extrusion.js"></script>
     <script src="js/openjscad/stl-generator.js"></script>
-    <script src="js/openscad-wasm.js"></script>
     <script src="browser-generator.js"></script>
 </body>
 </html>
