@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusText = document.getElementById('statusText');
     const progressBar = document.getElementById('progressBar');
     const libraryError = document.getElementById('libraryError');
+    const renderMethodRadios = document.getElementsByName('renderMethod');
     
     // State variables
     let isValid = false;
@@ -25,10 +26,34 @@ document.addEventListener('DOMContentLoaded', function() {
     let renderer = null;
     let controls = null;
     let animationFrameId = null;
+    let openscadInitialized = false;
     const MAX_CHARS = 14;
     
     // Import constants
     const SVG_THICKNESS = 4; // Match with clip-model.js
+    
+    // Get the selected rendering method
+    function getSelectedRenderMethod() {
+        for (const radio of renderMethodRadios) {
+            if (radio.checked) {
+                return radio.value;
+            }
+        }
+        return 'threejs'; // Default to THREE.js
+    }
+    
+    // Set up event listeners for render method selection
+    for (const radio of renderMethodRadios) {
+        radio.addEventListener('change', function() {
+            // If a name is already in the preview, update it with the new method
+            if (nameList.value.trim()) {
+                const names = nameList.value.trim().split('\n');
+                if (names.length > 0) {
+                    updatePreview(names[0]);
+                }
+            }
+        });
+    }
     
     // Check if THREE.js is available
     function checkThreeAvailability() {
@@ -42,6 +67,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         console.log('THREE.js available:', THREE.REVISION);
         return true;
+    }
+    
+    // Initialize the OpenSCAD-WASM library
+    function initializeOpenSCAD() {
+        if (typeof initOpenSCAD === 'undefined') {
+            console.error('OpenSCAD-WASM library not found');
+            return Promise.reject(new Error('OpenSCAD-WASM library not found'));
+        }
+        
+        console.log('Initializing OpenSCAD-WASM');
+        openscadInitialized = true;
+        
+        // Show loading message
+        previewBtn.textContent = 'Loading OpenSCAD...';
+        previewBtn.disabled = true;
+        
+        return initOpenSCAD()
+            .then(openScadModule => {
+                console.log('OpenSCAD-WASM initialized successfully');
+                previewBtn.textContent = 'Preview First Name';
+                previewBtn.disabled = false;
+                return openScadModule;
+            })
+            .catch(error => {
+                console.error('Failed to initialize OpenSCAD-WASM:', error);
+                previewBtn.textContent = 'Preview First Name';
+                previewBtn.disabled = false;
+                // Auto-select THREE.js rendering method
+                for (const radio of renderMethodRadios) {
+                    if (radio.value === 'threejs') {
+                        radio.checked = true;
+                    } else {
+                        radio.disabled = true;
+                    }
+                }
+                throw error;
+            });
     }
     
     // Initialize once libraries are loaded
@@ -59,6 +121,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add a test scene to verify rendering is working
         createTestScene();
+        
+        // Try to initialize OpenSCAD-WASM in the background
+        initializeOpenSCAD().catch(error => {
+            console.warn('OpenSCAD-WASM initialization failed, using THREE.js fallback:', error);
+        });
     }
 
     // Create a simple test scene to verify three.js is working
@@ -204,7 +271,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Preview button click handler - Now using async/await for font loading
+    // Update the preview with the current name
+    async function updatePreview(name) {
+        // Reset the scene
+        resetScene();
+        
+        try {
+            // Check which rendering method to use
+            const renderMethod = getSelectedRenderMethod();
+            
+            if (renderMethod === 'openscad' && isOpenSCADAvailable()) {
+                // Create OpenSCAD preview
+                const previewScene = await createOpenSCADPreviewScene(name);
+                
+                // Import objects from the preview scene to our main scene
+                if (previewScene && previewScene.children) {
+                    previewScene.children.forEach(child => {
+                        scene.add(child.clone());
+                    });
+                }
+            } else {
+                // Create THREE.js preview (fallback)
+                const previewScene = await createPreviewScene(name);
+                
+                // Import objects from the preview scene to our main scene
+                if (previewScene && previewScene.children) {
+                    previewScene.children.forEach(child => {
+                        scene.add(child.clone());
+                    });
+                }
+            }
+            
+            // Hide placeholder and show canvas
+            previewPlaceholder.style.display = 'none';
+            previewCanvas.style.display = 'block';
+            
+            // Update camera position for better viewing
+            camera.position.set(0, -50, 80);
+            camera.lookAt(0, 0, 0);
+            
+            // Start animation
+            startAnimation();
+            
+            console.log('Preview created and rendered');
+            return true;
+        } catch (error) {
+            console.error('Error generating preview:', error);
+            return false;
+        }
+    }
+    
+    // Preview button click handler
     previewBtn.addEventListener('click', async function() {
         const names = nameList.value.trim().split('\n').filter(name => name.trim() !== '');
         
@@ -221,38 +338,20 @@ document.addEventListener('DOMContentLoaded', function() {
         previewBtn.textContent = 'Generating Preview...';
         
         try {
-            console.log('Creating preview scene for name:', nameToPreview);
+            console.log('Creating preview for name:', nameToPreview);
             
-            // Reset the scene
-            resetScene();
-            
-            // Create the preview scene using our stl-generator.js function
-            // This is now an async function that returns a Promise
-            const previewScene = await createPreviewScene(nameToPreview);
-            
-            // Import objects from the preview scene to our main scene
-            if (previewScene && previewScene.children) {
-                previewScene.children.forEach(child => {
-                    scene.add(child.clone());
-                });
-            }
-            
-            // Hide placeholder and show canvas
-            previewPlaceholder.style.display = 'none';
-            previewCanvas.style.display = 'block';
-            
-            // Update camera position for better viewing
-            camera.position.set(0, -50, 80);
-            camera.lookAt(0, 0, 0);
-            
-            // Start animation
-            startAnimation();
+            // Update the preview
+            const success = await updatePreview(nameToPreview);
             
             // Update button state
-            previewBtn.textContent = 'Update Preview';
-            previewBtn.disabled = false;
-            
-            console.log('Preview scene created and rendered');
+            if (success) {
+                previewBtn.textContent = 'Update Preview';
+            } else {
+                previewBtn.textContent = 'Preview Failed';
+                setTimeout(() => {
+                    previewBtn.textContent = 'Try Preview Again';
+                }, 2000);
+            }
         } catch (error) {
             console.error('Error generating preview:', error);
             previewBtn.textContent = 'Preview Failed';
@@ -262,10 +361,105 @@ document.addEventListener('DOMContentLoaded', function() {
             
             setTimeout(() => {
                 previewBtn.textContent = 'Try Preview Again';
-                previewBtn.disabled = false;
             }, 2000);
+        } finally {
+            previewBtn.disabled = false;
         }
     });
+    
+    // Generate STL files - choose the appropriate method based on the selected render method
+    async function generateSTLFiles(names) {
+        const renderMethod = getSelectedRenderMethod();
+        
+        if (renderMethod === 'openscad' && isOpenSCADAvailable()) {
+            // Use OpenSCAD-WASM for generation
+            return generateSTLFilesWithOpenSCAD(names);
+        } else {
+            // Use THREE.js for generation
+            return processNames(names, updateProgress);
+        }
+    }
+    
+    // Generate STL files using OpenSCAD-WASM
+    async function generateSTLFilesWithOpenSCAD(names) {
+        console.log("Generating STL files with OpenSCAD-WASM for", names.length, "names");
+        
+        // Array to collect any errors
+        const errors = [];
+        
+        // Process each name sequentially
+        for (let i = 0; i < names.length; i++) {
+            const name = names[i];
+            
+            try {
+                // Update progress
+                updateProgress({
+                    current: i + 1,
+                    total: names.length,
+                    name: name,
+                    status: 'processing'
+                });
+                
+                console.log(`Processing name ${i+1}/${names.length}: ${name}`);
+                
+                // Load the OpenSCAD template
+                const templateUrl = 'templates/templatev2.scad';
+                const template = await loadFileFromURL(templateUrl);
+                
+                // Set parameters for the name tag
+                const params = {
+                    name: name
+                };
+                
+                // Generate STL from OpenSCAD
+                const stlData = await generateFromOpenSCAD(template, params);
+                
+                // Create a Blob from the STL data
+                const blob = new Blob([stlData], { type: 'application/octet-stream' });
+                
+                // Create a download URL for the blob
+                const url = URL.createObjectURL(blob);
+                
+                // Create a temporary download link
+                const downloadLink = document.createElement('a');
+                downloadLink.href = url;
+                downloadLink.download = `${name}.stl`;
+                
+                // Append the link to the document, click it, and remove it
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                // Clean up the URL object
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 100);
+                
+                // Short delay to prevent overwhelming the browser
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+                console.error(`Error processing name "${name}":`, error);
+                errors.push({ name, error: error.message || 'Unknown error' });
+                
+                // Update progress with error
+                updateProgress({
+                    current: i + 1,
+                    total: names.length,
+                    name: name,
+                    status: 'error',
+                    error: error.message || 'Unknown error'
+                });
+            }
+        }
+        
+        // Return summary of processing
+        console.log("Names processing complete. Successful:", names.length - errors.length, "Errors:", errors.length);
+        return {
+            total: names.length,
+            successful: names.length - errors.length,
+            errors: errors
+        };
+    }
     
     // Generate button click handler
     generateBtn.addEventListener('click', async function() {
@@ -291,7 +485,9 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(async () => {
             try {
                 console.log('Starting STL generation for', names.length, 'names');
-                const result = await processNames(names, updateProgress);
+                
+                // Generate STL files with the appropriate method
+                const result = await generateSTLFiles(names);
                 
                 // Show completion message
                 statusText.textContent = `Generated ${result.successful} of ${result.total} STL files.`;
