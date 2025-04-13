@@ -12,6 +12,7 @@ names = [
 
 # Paths
 template_path = Path("templatev2.scad").resolve()
+svg_path = Path("Clip1.svg").resolve()
 output_dir = Path("output_stls").resolve()
 
 def find_openscad():
@@ -60,6 +61,12 @@ def test_setup(openscad_exe):
         print(f"Error: Template file '{template_path}' does not exist.")
         return False
     print(f"Template file found: {template_path}")
+    
+    # Check SVG file
+    if not svg_path.exists():
+        print(f"Error: SVG file '{svg_path}' does not exist.")
+        return False
+    print(f"SVG file found: {svg_path}")
 
     # Check output directory
     try:
@@ -81,27 +88,31 @@ def generate_stls(openscad_exe):
     for name in names:
         modified_content = template_content.replace('name = "Your Text";', f'name = "{name}";')
 
-        # Use a temporary file for the .scad
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".scad", delete=False) as temp_scad_file:
-            temp_scad_file.write(modified_content)
-            temp_scad_path = Path(temp_scad_file.name)
+        # Create a temporary directory for the files
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Set up paths
+            temp_dir_path = Path(temp_dir)
+            temp_scad_path = temp_dir_path / "temp.scad"
+            temp_svg_path = temp_dir_path / "Clip1.svg"
+            
+            # Copy the SVG file to the temporary directory
+            shutil.copy(svg_path, temp_svg_path)
+            
+            # Write the SCAD file to the temporary directory
+            with open(temp_scad_path, "w") as temp_scad_file:
+                temp_scad_file.write(modified_content)
 
-        output_stl_path = output_dir / f"{name}.stl"
+            output_stl_path = output_dir / f"{name}.stl"
 
-        print(f"Generating STL for: {name}")
-        try:
-            subprocess.run(
-                [openscad_exe, "-o", str(output_stl_path), str(temp_scad_path)],
-                check=True
-            )
-            print(f"STL generated: {output_stl_path}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error generating STL for '{name}': {e}")
-        finally:
+            print(f"Generating STL for: {name}")
             try:
-                temp_scad_path.unlink()  # Delete the temp file
-            except Exception as e:
-                print(f"Warning: Could not delete temporary file '{temp_scad_path}': {e}")
+                subprocess.run(
+                    [openscad_exe, "-o", str(output_stl_path), str(temp_scad_path)],
+                    check=True
+                )
+                print(f"STL generated: {output_stl_path}")
+            except subprocess.CalledProcessError as e:
+                print(f"Error generating STL for '{name}': {e}")
 
 if __name__ == "__main__":
     openscad_exe = find_openscad()

@@ -30,7 +30,7 @@ function sum_chars_loop(text_content, n, i = 0, acc = 0) =
 module imported_svg() {
     translate([0, 0, 0])
         linear_extrude(height = svg_thickness)
-            import("./Clip1.svg");
+            import("Clip1.svg"); // Removed ./ to make it look in current directory
 }
 
 // Add text with underline
