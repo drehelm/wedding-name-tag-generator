@@ -71,10 +71,11 @@ async function build() {
             content = content.replace('</head>', `  <meta name="version" content="${version}">\n  <meta name="build-date" content="${buildDate}">\n</head>`);
           }
           
-          // Add version info in footer if a footer exists
-          if (content.includes('<footer')) {
-            content = content.replace(/<footer([^>]*)>/, `<footer$1>\n  <div class="version-info">Version ${version} (Built: ${new Date().toLocaleDateString()})</div>`);
-          }
+          // Update the version info div with the actual version number
+          content = content.replace(
+            /<div class="version-info"><!-- Version info will be automatically inserted here by the build script --><\/div>/,
+            `<div class="version-info">Version ${version} (Built: ${new Date().toLocaleDateString()})</div>`
+          );
           
           // Write the modified content
           fs.writeFileSync(destPath, content);
