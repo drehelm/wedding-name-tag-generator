@@ -5,19 +5,32 @@ const path = require('path');
 const filesToPreserve = [
   'README.md',
   'GITHUB_PAGES_DEPLOYMENT.md',
+  'DEVELOPMENT_WORKFLOW.md',
+  'VERSION.md',
   'LICENSE',
   'package.json',
   'package-lock.json',
   'node_modules',
   '.git',
   '.gitignore',
-  'build.js'
+  'build.js',
+  'manual-deploy.js',
+  'scripts',
+  'test-version-injection.js'
 ];
 
 async function build() {
   console.log('Starting build process...');
   
   try {
+    // Get version from package.json
+    const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+    const version = packageJson.version;
+    const buildDate = new Date().toISOString();
+    
+    console.log(`Building version: ${version}`);
+    console.log(`Build timestamp: ${buildDate}`);
+    
     // Source directory (public)
     const sourceDir = path.join(__dirname, 'public');
     
@@ -45,9 +58,31 @@ async function build() {
         console.log(`Copying directory: ${file}`);
         await fs.copy(sourcePath, destPath, { overwrite: true });
       } else {
-        // If it's a file, copy it
-        console.log(`Copying file: ${file}`);
-        await fs.copyFile(sourcePath, destPath);
+        // If it's an HTML file, inject version information
+        if (file.endsWith('.html')) {
+          console.log(`Processing HTML file: ${file} (injecting version: ${version})`);
+          let content = fs.readFileSync(sourcePath, 'utf8');
+          
+          // Inject version number into title
+          content = content.replace(/<title>(.*?)<\/title>/, `<title>$1 (v${version})</title>`);
+          
+          // Add version meta tag if not exists
+          if (!content.includes('<meta name="version"')) {
+            content = content.replace('</head>', `  <meta name="version" content="${version}">\n  <meta name="build-date" content="${buildDate}">\n</head>`);
+          }
+          
+          // Add version info in footer if a footer exists
+          if (content.includes('<footer')) {
+            content = content.replace(/<footer([^>]*)>/, `<footer$1>\n  <div class="version-info">Version ${version} (Built: ${new Date().toLocaleDateString()})</div>`);
+          }
+          
+          // Write the modified content
+          fs.writeFileSync(destPath, content);
+        } else {
+          // If it's any other file, just copy it
+          console.log(`Copying file: ${file}`);
+          await fs.copyFile(sourcePath, destPath);
+        }
       }
     }
     

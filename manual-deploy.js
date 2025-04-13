@@ -55,7 +55,7 @@ try {
   const version = packageJson.version;
   console.log(`Deploying version: ${version}`);
   
-  // Build the project
+  // Build the project - this copies files from /public to root
   console.log('Building project...');
   require('./build.js');
   
@@ -70,45 +70,67 @@ try {
     process.exit(1);
   }
   
-  // Save current branch
+  // Save current branch and stash any changes
   const currentBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
   console.log(`Current branch: ${currentBranch}`);
   
-  // Create and switch to a temporary branch for deployment
-  const tempBranch = `deploy-${Date.now()}`;
-  if (!run(`git checkout -b ${tempBranch}`)) {
-    console.error('Failed to create temporary branch');
-    process.exit(1);
+  // Create a temp directory for deployment
+  const deployDir = path.join(__dirname, '.deploy-temp');
+  
+  // Delete the temp directory if it exists
+  if (fs.existsSync(deployDir)) {
+    fs.removeSync(deployDir);
   }
   
-  // Add all files
-  if (!run('git add -A')) {
-    console.error('Failed to add files');
-    run(`git checkout ${currentBranch}`);
-    run(`git branch -D ${tempBranch}`);
-    process.exit(1);
+  // Create the temp directory
+  fs.mkdirSync(deployDir);
+  
+  // Copy only the files needed for GitHub Pages to the temp directory
+  // This prevents us from accidentally deleting local files
+  const filesToDeploy = [
+    'index.html',
+    'styles.css',
+    'script.js',
+    'templates',
+    'images'
+  ];
+  
+  for (const file of filesToDeploy) {
+    const sourcePath = path.join(__dirname, file);
+    const destPath = path.join(deployDir, file);
+    
+    if (fs.existsSync(sourcePath)) {
+      if (fs.statSync(sourcePath).isDirectory()) {
+        fs.copySync(sourcePath, destPath);
+      } else {
+        fs.copyFileSync(sourcePath, destPath);
+      }
+    }
   }
   
-  // Commit with version in message
+  // Initialize a new git repo in the temp directory
+  process.chdir(deployDir);
+  execSync('git init');
+  execSync('git checkout -b gh-pages');
+  
+  // Add and commit files
+  execSync('git add .');
   const commitMessage = `${options.message} (v${version})`;
-  if (!run(`git commit -m "${commitMessage}" --allow-empty`)) {
-    console.error('Failed to commit files');
-    run(`git checkout ${currentBranch}`);
-    run(`git branch -D ${tempBranch}`);
-    process.exit(1);
-  }
+  execSync(`git commit -m "${commitMessage}" --allow-empty`);
   
-  // Push to GitHub forcing the update of target branch
-  if (!run(`git push origin HEAD:${options.target} --force`)) {
+  // Add the remote
+  const repoUrl = execSync('git config --get remote.origin.url').toString().trim();
+  execSync(`git remote add origin ${repoUrl}`);
+  
+  // Push to the target branch
+  if (!run(`git push origin gh-pages:${options.target} --force`)) {
     console.error(`Failed to push to ${options.target} branch`);
-    run(`git checkout ${currentBranch}`);
-    run(`git branch -D ${tempBranch}`);
     process.exit(1);
   }
   
-  // Return to original branch and clean up
-  run(`git checkout ${currentBranch}`);
-  run(`git branch -D ${tempBranch}`);
+  // Clean up: go back to original directory and remove temp folder
+  process.chdir(__dirname);
+  fs.removeSync(deployDir);
   
   console.log('\nDeployment complete!');
   
@@ -121,5 +143,13 @@ try {
   
 } catch (error) {
   console.error('Deployment failed:', error);
+  
+  // Make sure we're back in the project directory
+  try {
+    process.chdir(__dirname);
+  } catch (e) {
+    // Already in the right directory, do nothing
+  }
+  
   process.exit(1);
 }
