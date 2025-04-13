@@ -36,7 +36,7 @@ With this approach, you'll push the entire project but only deploy the `public` 
 
 4. Connect to your GitHub repository:
    ```
-   git remote add origin https://github.com/yourusername/wedding-name-tag-generator.git
+   git remote add origin https://github.com/drehelm/wedding-name-tag-generator.git
    ```
 
 5. Push your code:
