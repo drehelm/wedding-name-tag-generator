@@ -1,6 +1,6 @@
 # Deploying to GitHub Pages
 
-This guide explains how to deploy the Wedding Name Tag Generator to GitHub Pages.
+This guide explains how to deploy the Wedding Name Tag Generator to GitHub Pages using npm build scripts.
 
 ## Step 1: Create a GitHub Repository
 
@@ -10,83 +10,60 @@ This guide explains how to deploy the Wedding Name Tag Generator to GitHub Pages
 4. Make it public (GitHub Pages requires this for free accounts)
 5. Click "Create repository"
 
-## Step 2: Push Your Code
+## Step 2: Set Up Your Project
 
-You have two options for deploying to GitHub Pages:
-
-### Option A: Deploy from the `public` directory
-
-With this approach, you'll push the entire project but only deploy the `public` directory:
-
-1. Initialize Git in your project folder:
+1. Clone your repository locally:
    ```
-   git init
+   git clone https://github.com/yourusername/wedding-name-tag-generator.git
+   cd wedding-name-tag-generator
    ```
 
-2. Create a `.gitignore` file (optional):
+2. Copy all project files into this directory (or if you already have the project, just continue in that directory)
+
+3. Install the required npm packages:
    ```
-   echo "node_modules/" > .gitignore
+   npm install
    ```
 
-3. Add and commit your files:
+## Step 3: Build and Deploy
+
+Our npm scripts make deployment simple:
+
+1. Run the build script to copy files from the `public` directory to the repository root:
+   ```
+   npm run build
+   ```
+
+2. Add and commit the generated files:
    ```
    git add .
-   git commit -m "Initial commit"
+   git commit -m "Build for GitHub Pages"
    ```
 
-4. Connect to your GitHub repository:
+3. Push to GitHub:
    ```
-   git remote add origin https://github.com/drehelm/wedding-name-tag-generator.git
-   ```
-
-5. Push your code:
-   ```
-   git push -u origin main
+   git push origin main
    ```
 
-### Option B: Push only the `public` directory
+4. Optional: Use the gh-pages package to automate deployment:
+   ```
+   npm run deploy
+   ```
+   This will build the project and push to the gh-pages branch automatically.
 
-Alternatively, you can push only the files needed for GitHub Pages:
-
-1. Navigate to your public directory:
-   ```
-   cd public
-   ```
-
-2. Initialize Git:
-   ```
-   git init
-   ```
-
-3. Add and commit files:
-   ```
-   git add .
-   git commit -m "Initial commit"
-   ```
-
-4. Connect to your GitHub repository:
-   ```
-   git remote add origin https://github.com/yourusername/wedding-name-tag-generator.git
-   ```
-
-5. Push to GitHub:
-   ```
-   git push -u origin main
-   ```
-
-## Step 3: Configure GitHub Pages
+## Step 4: Configure GitHub Pages
 
 1. Go to your GitHub repository
 2. Click "Settings"
 3. Scroll down to the "GitHub Pages" section
-4. For deployment source, select one of these options:
-   - If you used Option A: Select "main" branch and "/public" folder
-   - If you used Option B: Select "main" branch and root folder
+4. For the source, select either:
+   - `main` branch (if you pushed directly to main)
+   - `gh-pages` branch (if you used the automated deploy command)
 5. Click "Save"
 
 GitHub will provide you with a URL where your site is published (typically https://yourusername.github.io/wedding-name-tag-generator/)
 
-## Step 4: Verify Your Deployment
+## Step 5: Verify Your Deployment
 
 1. Wait a few minutes for GitHub Pages to build your site
 2. Visit the URL provided in the GitHub Pages settings
@@ -95,31 +72,48 @@ GitHub will provide you with a URL where your site is published (typically https
    - Generate and download a ZIP file
    - Extract and use the files in the ZIP
 
-## Troubleshooting
-
-1. **Page not found**: Make sure your repository is public and GitHub Pages is properly configured
-2. **Resources not loading**: Check that all paths in your HTML file are relative
-3. **Templates not working**: Ensure all template files are in the public/templates directory
-4. **Custom domain**: You can set up a custom domain in the GitHub Pages settings
-
 ## Updating Your Site
 
 To update your site after making changes:
 
-1. Make your changes to the code
-2. Commit and push to GitHub:
+1. Make your changes to files in the `public` directory
+2. Run the build process again:
+   ```
+   npm run build
+   ```
+3. Commit and push your changes:
    ```
    git add .
    git commit -m "Update site"
    git push
    ```
-3. GitHub Pages will automatically rebuild and deploy your site
+4. Or use the automated deployment:
+   ```
+   npm run deploy
+   ```
 
-## Important Notes
+## Customization
 
-- GitHub Pages only serves static content (HTML, CSS, JavaScript)
-- All processing happens in the user's browser using JavaScript
-- We're using JSZip library for client-side ZIP file creation
-- No server-side code (like Node.js) will run on GitHub Pages
+You can customize various aspects of the site:
 
-Your Wedding Name Tag Generator should now be accessible to anyone with the GitHub Pages URL!
+1. Web Interface: Edit files in the `public` directory
+2. Templates: Modify files in the `public/templates` directory
+3. Appearance: Update the CSS in `public/styles.css`
+
+Remember to run the build script after making changes to see them reflected in the deployed site.
+
+## Troubleshooting
+
+1. **Files not updating**: Make sure you're running the build script after changes
+2. **Template files missing**: Check that `public/templates` contains all necessary files
+3. **Page not found**: Verify GitHub Pages is configured correctly in your repository settings
+4. **Build script errors**: Make sure you have installed all dependencies with `npm install`
+
+## Technical Details
+
+The build process:
+1. Copies all files from the `public` directory to the repository root
+2. Preserves important files like README.md and package.json
+3. Ensures proper placement of template files required by the application
+
+This approach allows GitHub Pages to serve the application from the repository root while keeping the source code organized with the public files in their own directory.

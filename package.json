@@ -2,10 +2,11 @@
   "name": "wedding-name-tag-generator",
   "version": "1.0.0",
   "description": "Web-based generator for 3D printable wedding name tags",
-  "main": "index.js",
   "scripts": {
-    "dev": "netlify dev",
-    "build": "netlify build"
+    "dev": "serve public",
+    "build": "node build.js",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d ."
   },
   "keywords": [
     "wedding",
@@ -17,9 +18,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "archiver": "^5.3.1"
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
-    "netlify-cli": "^12.7.2"
+    "fs-extra": "^11.1.1",
+    "gh-pages": "^5.0.0",
+    "serve": "^14.2.0"
   }
 }
