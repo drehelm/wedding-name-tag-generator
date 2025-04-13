@@ -1,4 +1,4 @@
-// text-generator.js - Creates 3D text for name tags using OpenJSCAD
+// text-generator.js - Creates 3D text for name tags using THREE.js
 
 // Constants for text dimensions (from OpenSCAD file)
 const TEXT_THICKNESS = 4;
@@ -33,69 +33,68 @@ function estimateTextWidth(text, sizeFactor = 1) {
   return width * sizeFactor;
 }
 
-// Create 3D text model with underline
-function generateTextModel(text) {
-  // Extract needed JSCAD modules
-  const { translate, rotateX } = jscadModeling.transforms;
-  const { cuboid } = jscadModeling.primitives;
-  const { extrudeLinear } = jscadModeling.extrusions;
-  const { union } = jscadModeling.booleans;
-  
-  // Create models array to store text and underline
-  const models = [];
-  
-  // Create 3D text
-  // Note: OpenJSCAD doesn't have a built-in text function like OpenSCAD
-  // For a real implementation, we would need a text-to-geometry library
-  // Here we'll simulate text with a placeholder box that scales with text length
-  
-  // Calculate estimated text dimensions
-  const textWidth = estimateTextWidth(text, 5);
-  const textHeight = FONT_SIZE * 0.7;  // Approximate height based on font size
-  
-  // Create a placeholder box for text (in a real implementation, we would use actual text geometry)
-  const textBox = cuboid({
-    size: [textWidth, textHeight, TEXT_THICKNESS],
-    center: [textWidth/2, -textHeight/2, TEXT_THICKNESS/2]
-  });
-  
-  // Position the text
-  const positionedText = translate(
-    [TEXT_X_OFFSET, TEXT_Y_OFFSET, 0],
-    textBox
-  );
-  
-  models.push(positionedText);
-  
-  // Create underline
-  const underlineLength = textWidth + (2 * UNDERLINE_MARGIN);
-  const underline = cuboid({
-    size: [underlineLength, UNDERLINE_THICKNESS, TEXT_THICKNESS],
-    center: [underlineLength/2, UNDERLINE_THICKNESS/2, TEXT_THICKNESS/2]
-  });
-  
-  // Position the underline (matching OpenSCAD positioning)
-  const positionedUnderline = translate(
-    [20, 12.4, 0],
-    underline
-  );
-  
-  models.push(positionedUnderline);
-  
-  // Combine text and underline
-  return union(models);
+// Create text mesh
+function createTextMesh(text) {
+    // For a real implementation we would use TextGeometry from THREE.js
+    // Since we don't have font loading set up in this prototype, we'll use a placeholder
+    
+    // Calculate the estimated text dimensions
+    const textWidth = estimateTextWidth(text, 5);
+    const textHeight = FONT_SIZE * 0.7;  // Approximate height based on font size
+    
+    // Create a box geometry to represent text
+    const textGeometry = new THREE.BoxGeometry(textWidth, textHeight, TEXT_THICKNESS);
+    const textMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2c3e50,
+        metalness: 0.1,
+        roughness: 0.8
+    });
+    
+    // Position the text correctly
+    textGeometry.translate(textWidth/2, -textHeight/2, TEXT_THICKNESS/2);
+    
+    return new THREE.Mesh(textGeometry, textMaterial);
 }
 
-// Create text with name for a specific name
-function getTextModel(name) {
-  // Generate the text model for the given name
-  return generateTextModel(name);
+// Create underline mesh
+function createUnderlineMesh(textWidth) {
+    // Create underline
+    const underlineLength = textWidth + (2 * UNDERLINE_MARGIN);
+    const underlineGeometry = new THREE.BoxGeometry(underlineLength, UNDERLINE_THICKNESS, TEXT_THICKNESS);
+    const underlineMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2c3e50,
+        metalness: 0.1,
+        roughness: 0.8
+    });
+    
+    // Position the underline correctly
+    underlineGeometry.translate(underlineLength/2, UNDERLINE_THICKNESS/2, TEXT_THICKNESS/2);
+    
+    return new THREE.Mesh(underlineGeometry, underlineMaterial);
 }
 
-// In a complete implementation, we would:
-// 1. Use a proper text-to-geometry library or API
-// 2. Support the STIX Two Text Bold font
-// 3. Handle proper text metrics and positioning
+// Function to get text and underline group for a name
+function getTextGroup(name) {
+    // Create a group to hold all text elements
+    const textGroup = new THREE.Group();
+    
+    // Create the text mesh
+    const textMesh = createTextMesh(name);
+    textMesh.position.set(TEXT_X_OFFSET, TEXT_Y_OFFSET, 0);
+    textGroup.add(textMesh);
+    
+    // Create the underline mesh
+    const textWidth = estimateTextWidth(name, 5);
+    const underlineMesh = createUnderlineMesh(textWidth);
+    underlineMesh.position.set(20, 12.4, 0);
+    textGroup.add(underlineMesh);
+    
+    return textGroup;
+}
 
-// For a production version, libraries like THREE.TextGeometry or custom
-// font-to-path solutions would provide actual text geometry
+// Add text for a name to a scene
+function addTextToScene(scene, name) {
+    const textGroup = getTextGroup(name);
+    scene.add(textGroup);
+    return textGroup;
+}

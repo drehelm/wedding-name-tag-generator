@@ -1,33 +1,41 @@
-// stl-generator.js - Generates STL files for name tags
+// stl-generator.js - Generates STL files for name tags using THREE.js
 
-// Function to create a complete name tag by combining clip and text
-function createNameTag(name) {
-  // Extract needed JSCAD modules
-  const { union } = jscadModeling.booleans;
+// Function to create a complete name tag scene
+function createNameTagScene(name) {
+  // Create a new THREE.js scene
+  const scene = new THREE.Scene();
   
-  // Get the clip model
-  const clipModel = getClipModel();
+  // Add the clip to the scene
+  const clipMesh = addClipToScene(scene);
   
-  // Get the text model
-  const textModel = getTextModel(name);
+  // Add the text to the scene
+  const textGroup = addTextToScene(scene, name);
   
-  // Combine the clip and text models
-  return union(clipModel, textModel);
+  return scene;
 }
 
 // Function to generate STL binary data for a name tag
 function generateSTL(name) {
-  // Access the JSCAD IO library correctly - it's exposed as a global object
-  // with a different name from what we were using
-  if (typeof io === 'undefined' || !io.stl) {
-    throw new Error('JSCAD IO library not loaded or STL serializer not available');
+  try {
+    // Create the name tag scene
+    const nameTagScene = createNameTagScene(name);
+    
+    // Check if the THREE.STLExporter is available
+    if (!THREE.STLExporter) {
+      throw new Error('THREE.STLExporter not available. Make sure THREE.js STLExporter is properly loaded.');
+    }
+    
+    // Create an STL exporter
+    const exporter = new THREE.STLExporter();
+    
+    // Export the scene to STL (binary format)
+    const stlData = exporter.parse(nameTagScene, { binary: true });
+    
+    return stlData;
+  } catch (error) {
+    console.error('Error generating STL:', error);
+    throw error;
   }
-  
-  // Create the name tag model
-  const nameTagModel = createNameTag(name);
-  
-  // Convert the model to STL binary format using the correct API
-  return io.stl.serialize({ binary: true }, nameTagModel);
 }
 
 // Function to generate and initiate download of an STL file
@@ -64,9 +72,9 @@ function downloadSTL(name) {
   });
 }
 
-// Function to generate a preview model for rendering
-function getPreviewModel(name) {
-  return createNameTag(name);
+// Function to create a THREE.js scene for preview
+function createPreviewScene(name) {
+  return createNameTagScene(name);
 }
 
 // Function to process multiple names and generate STL files

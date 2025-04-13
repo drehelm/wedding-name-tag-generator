@@ -6,12 +6,6 @@
     <title>Wedding Name Tag Generator - Browser Edition (v1.1.0)</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="browser-generator.css">
-    <!-- OpenJSCAD dependencies - updated with correct libraries and order -->
-    <script src="https://unpkg.com/@jscad/modeling@2.11.0/dist/jscad-modeling.min.js"></script>
-    <script src="https://unpkg.com/@jscad/regl-renderer@2.6.4/dist/jscad-regl-renderer.min.js"></script>
-    <!-- STL format serializer as a standalone library -->
-    <script src="https://unpkg.com/@jscad/io@2.4.4/dist/io.min.js"></script>
-    <script src="https://unpkg.com/@jscad/io@2.4.4/dist/formats/stl/index.js"></script>
     <!-- STIX Two Text Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -117,6 +111,17 @@
                     <li>Send the STL files to your 3D printer</li>
                 </ol>
             </div>
+
+            <div id="libraryError" class="validation-feedback" style="display:none;">
+                <strong>Browser Compatibility Error</strong><br>
+                Your browser might not support the 3D libraries needed for this feature. Please try:
+                <ul>
+                    <li>Using a modern browser like Chrome, Firefox, or Edge</li>
+                    <li>Enabling WebGL in your browser settings</li>
+                    <li>Disabling ad blockers or script blockers for this site</li>
+                    <li>Using the <a href="index.html">traditional method</a> instead</li>
+                </ul>
+            </div>
         </main>
 
         <footer>
@@ -125,33 +130,10 @@
         </footer>
     </div>
 
-    <!-- Define globals for easier library access -->
-    <script>
-        // Create global references to make library access easier
-        let jscadModeling;
-        let jscadReglRenderer;
-        
-        // Set up library references once loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Assign JSCAD library references to our global variables
-            if (window.jscad && window.jscad.modeling) {
-                jscadModeling = window.jscad.modeling;
-            } else {
-                console.error('JSCAD modeling library not found');
-            }
-            
-            if (window.jscad && window.jscad.reglRenderer) {
-                jscadReglRenderer = window.jscad.reglRenderer;
-            } else {
-                console.error('JSCAD regl-renderer library not found');
-            }
-            
-            // Check STL serializer
-            if (!window.io || !window.io.stl) {
-                console.error('JSCAD STL serializer not available');
-            }
-        });
-    </script>
+    <!-- Load THREE.js for 3D visualization (a more reliable library for this purpose) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/exporters/STLExporter.js"></script>
 
     <!-- App-specific scripts -->
     <script src="js/openjscad/clip-model.js"></script>

@@ -15,18 +15,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const processingStatus = document.getElementById('processingStatus');
     const statusText = document.getElementById('statusText');
     const progressBar = document.getElementById('progressBar');
+    const libraryError = document.getElementById('libraryError');
     
     // State variables
     let isValid = false;
     let isAutoRotating = false;
+    let scene = null;
+    let camera = null;
     let renderer = null;
-    let currentModel = null;
+    let controls = null;
+    let animationFrameId = null;
     const MAX_CHARS = 14;
     
-    // Initialize once JSCAD libraries are loaded
+    // Check if THREE.js is available
+    function checkThreeAvailability() {
+        if (typeof THREE === 'undefined') {
+            libraryError.style.display = 'block';
+            validateBtn.disabled = true;
+            previewBtn.disabled = true;
+            generateBtn.disabled = true;
+            return false;
+        }
+        return true;
+    }
+    
+    // Initialize once libraries are loaded
     function initializeApp() {
-        // Set up the renderer
-        setupRenderer();
+        if (!checkThreeAvailability()) {
+            return;
+        }
+        
+        // Set up the THREE.js environment
+        setupThreeJS();
         
         // Enable buttons
         validateBtn.disabled = false;
@@ -152,11 +172,9 @@ document.addEventListener('DOMContentLoaded', function() {
         previewBtn.textContent = 'Generating Preview...';
         
         try {
-            // Generate the preview model
-            currentModel = getPreviewModel(nameToPreview);
-            
-            // Show the preview
-            showPreview();
+            // Create a new preview scene
+            resetScene();
+            createPreview(nameToPreview);
             
             // Update button state
             previewBtn.textContent = 'Update Preview';
@@ -238,78 +256,127 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Set up the 3D renderer
-    function setupRenderer() {
-        // Only proceed if JSCAD libraries are loaded
-        if (!window.jscadModeling || !window.jscadReglRenderer) {
-            console.error('JSCAD libraries not loaded');
-            return;
-        }
-        
-        // Get the necessary functions from the libraries
-        const { prepareRender } = jscadReglRenderer;
-        
+    // Set up THREE.js renderer, scene and camera
+    function setupThreeJS() {
         try {
-            // Initialize the renderer
-            renderer = prepareRender({
-                glOptions: { canvas: previewCanvas }
-            });
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
             
-            console.log('Renderer initialized');
+            // Create camera
+            camera = new THREE.PerspectiveCamera(45, previewCanvas.clientWidth / previewCanvas.clientHeight, 1, 1000);
+            camera.position.set(0, 0, 150);
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true });
+            renderer.setSize(previewCanvas.clientWidth, previewCanvas.clientHeight);
+            
+            // Create controls
+            if (THREE.OrbitControls) {
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enablePan = false;
+                controls.minDistance = 50;
+                controls.maxDistance = 200;
+            } else {
+                console.warn('OrbitControls not available');
+            }
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            scene.add(directionalLight);
+            
+            console.log('THREE.js initialized successfully');
         } catch (error) {
-            console.error('Error initializing renderer:', error);
+            console.error('Error initializing THREE.js:', error);
+            libraryError.style.display = 'block';
         }
     }
     
-    // Display the 3D preview
-    function showPreview() {
-        if (!renderer || !currentModel) {
-            console.error('Renderer or model not ready');
+    // Clear the current scene
+    function resetScene() {
+        if (!scene) return;
+        
+        // Remove all objects from the scene
+        while(scene.children.length > 0) { 
+            scene.remove(scene.children[0]); 
+        }
+        
+        // Re-add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(50, 50, 50);
+        scene.add(directionalLight);
+    }
+    
+    // Create a preview for a specific name
+    function createPreview(name) {
+        if (!scene || !camera || !renderer) {
+            console.error('THREE.js not properly initialized');
             return;
         }
         
-        // Hide placeholder and show canvas
-        previewPlaceholder.style.display = 'none';
-        previewCanvas.style.display = 'block';
-        
-        // Set up the render function
-        const { camera, drawCommands, entitiesFromSolids } = jscadReglRenderer;
-        
-        // Create entities from the model
-        const entities = entitiesFromSolids({}, [currentModel]);
-        
-        // Set up camera
-        const cameraState = camera.create({
-            position: [0, 0, 100],
-            target: [0, 0, 0],
-            perspective: {
-                fov: Math.PI / 4
-            }
-        });
-        
-        // Function to render the scene
-        function render() {
-            if (!renderer) return;
+        try {
+            // Create the name tag scene with the provided name
+            const previewScene = createPreviewScene(name);
             
-            // Update camera if auto-rotating
-            if (isAutoRotating) {
-                const rotateY = Date.now() * 0.001;
-                camera.rotate(cameraState, rotateY, 0);
+            // Add the objects from the preview scene to our main scene
+            if (previewScene.children) {
+                previewScene.children.forEach(child => {
+                    scene.add(child.clone());
+                });
             }
             
-            // Perform the rendering
-            renderer(drawCommands, {
-                camera: cameraState,
-                entities
-            });
+            // Hide placeholder and show canvas
+            previewPlaceholder.style.display = 'none';
+            previewCanvas.style.display = 'block';
             
-            // Request next frame
-            requestAnimationFrame(render);
+            // Start animation
+            startAnimation();
+        } catch (error) {
+            console.error('Error creating preview:', error);
+            throw error;
+        }
+    }
+    
+    // Animation loop
+    function startAnimation() {
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
         }
         
-        // Start the render loop
-        render();
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+            
+            if (isAutoRotating && scene) {
+                scene.rotation.y += 0.01;
+            }
+            
+            if (controls) {
+                controls.update();
+            }
+            
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+        
+        animate();
     }
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (camera && renderer) {
+            camera.aspect = previewCanvas.clientWidth / previewCanvas.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(previewCanvas.clientWidth, previewCanvas.clientHeight);
+        }
+    });
     
     // Toggle auto-rotation
     rotateBtn.addEventListener('click', function() {
@@ -319,27 +386,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Reset camera view
     resetViewBtn.addEventListener('click', function() {
-        if (!renderer) return;
+        if (camera) {
+            camera.position.set(0, 0, 150);
+            camera.lookAt(0, 0, 0);
+        }
         
-        const { camera } = jscadReglRenderer;
+        if (controls) {
+            controls.reset();
+        }
         
-        // Reset camera to default position
-        camera.update(cameraState, {
-            position: [0, 0, 100],
-            target: [0, 0, 0]
-        });
+        if (scene) {
+            scene.rotation.set(0, 0, 0);
+        }
     });
     
-    // Check if JSCAD libraries are loaded
-    function checkLibrariesLoaded() {
-        if (window.jscadModeling && window.jscadReglRenderer && window.jscadIo) {
-            initializeApp();
-        } else {
-            // Try again in 100ms
-            setTimeout(checkLibrariesLoaded, 100);
-        }
-    }
-    
-    // Start checking for libraries
-    checkLibrariesLoaded();
+    // Initialize the app
+    initializeApp();
 });
