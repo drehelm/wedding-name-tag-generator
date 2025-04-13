@@ -30,12 +30,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if THREE.js is available
     function checkThreeAvailability() {
         if (typeof THREE === 'undefined') {
+            console.error('THREE.js not available');
             libraryError.style.display = 'block';
             validateBtn.disabled = true;
             previewBtn.disabled = true;
             generateBtn.disabled = true;
             return false;
         }
+        console.log('THREE.js available:', THREE.REVISION);
         return true;
     }
     
@@ -51,6 +53,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // Enable buttons
         validateBtn.disabled = false;
         previewBtn.disabled = false;
+
+        // Add a simple test cube to make sure rendering works
+        addTestCube();
+    }
+
+    // Add a simple test cube to verify rendering
+    function addTestCube() {
+        if (!scene) {
+            console.error('No scene available for test cube');
+            return;
+        }
+
+        const geometry = new THREE.BoxGeometry(20, 20, 20);
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0xff0000,
+            metalness: 0.3,
+            roughness: 0.7
+        });
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(0, 0, 0);
+        
+        scene.add(cube);
+        console.log('Test cube added to scene');
+        
+        // Start animation to render the cube
+        startAnimation();
+        
+        // Hide placeholder and show canvas
+        previewPlaceholder.style.display = 'none';
+        previewCanvas.style.display = 'block';
     }
     
     // Character count and validation as user types
@@ -172,9 +204,11 @@ document.addEventListener('DOMContentLoaded', function() {
         previewBtn.textContent = 'Generating Preview...';
         
         try {
+            console.log('Starting preview for name:', nameToPreview);
+            
             // Create a new preview scene
             resetScene();
-            createPreview(nameToPreview);
+            createSimplePreview(nameToPreview);
             
             // Update button state
             previewBtn.textContent = 'Update Preview';
@@ -254,17 +288,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up THREE.js renderer, scene and camera
     function setupThreeJS() {
         try {
+            console.log('Setting up THREE.js environment');
+            
             // Create scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf0f0f0);
             
             // Create camera
             camera = new THREE.PerspectiveCamera(45, previewCanvas.clientWidth / previewCanvas.clientHeight, 1, 1000);
-            camera.position.set(0, 0, 150);
+            camera.position.set(0, 0, 100);
             
             // Create renderer
-            renderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true });
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: previewCanvas, 
+                antialias: true,
+                alpha: true
+            });
             renderer.setSize(previewCanvas.clientWidth, previewCanvas.clientHeight);
+            renderer.setClearColor(0xf0f0f0, 1);
             
             // Create controls using our embedded OrbitControls
             controls = new OrbitControls(camera, renderer.domElement);
@@ -273,14 +314,17 @@ document.addEventListener('DOMContentLoaded', function() {
             controls.maxDistance = 200;
             
             // Add lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
             
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
             directionalLight.position.set(50, 50, 50);
             scene.add(directionalLight);
             
             console.log('THREE.js initialized successfully');
+            
+            // Test render
+            renderer.render(scene, camera);
         } catch (error) {
             console.error('Error initializing THREE.js:', error);
             libraryError.style.display = 'block';
@@ -289,7 +333,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Clear the current scene
     function resetScene() {
-        if (!scene) return;
+        if (!scene) {
+            console.error('No scene to reset');
+            return;
+        }
+        
+        console.log('Resetting scene');
         
         // Remove all objects from the scene
         while(scene.children.length > 0) { 
@@ -297,41 +346,77 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Re-add lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
         directionalLight.position.set(50, 50, 50);
         scene.add(directionalLight);
     }
     
-    // Create a preview for a specific name
-    function createPreview(name) {
+    // Create a simple preview for debugging
+    function createSimplePreview(name) {
         if (!scene || !camera || !renderer) {
             console.error('THREE.js not properly initialized');
             return;
         }
         
+        console.log('Creating simple preview for name:', name);
+        
         try {
-            // Create the name tag scene with the provided name
-            const previewScene = createPreviewScene(name);
+            // Create a simple clip representation
+            const clipGeometry = new THREE.BoxGeometry(60, 20, 5);
+            const clipMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x3498db,
+                metalness: 0.2,
+                roughness: 0.5
+            });
+            const clipMesh = new THREE.Mesh(clipGeometry, clipMaterial);
+            scene.add(clipMesh);
             
-            // Add the objects from the preview scene to our main scene
-            if (previewScene.children) {
-                previewScene.children.forEach(child => {
-                    scene.add(child.clone());
-                });
-            }
+            // Create a simple text representation
+            const textWidth = name.length * 5;
+            const textGeometry = new THREE.BoxGeometry(textWidth, 10, 2);
+            const textMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2c3e50,
+                metalness: 0.1,
+                roughness: 0.8
+            });
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.set(0, 0, 5);
+            scene.add(textMesh);
+            
+            // Create a simple underline
+            const underlineGeometry = new THREE.BoxGeometry(textWidth + 10, 2, 2);
+            const underlineMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2c3e50,
+                metalness: 0.1,
+                roughness: 0.8
+            });
+            const underlineMesh = new THREE.Mesh(underlineGeometry, underlineMaterial);
+            underlineMesh.position.set(0, -8, 5);
+            scene.add(underlineMesh);
+            
+            console.log('Simple preview created with', scene.children.length, 'objects');
             
             // Hide placeholder and show canvas
             previewPlaceholder.style.display = 'none';
             previewCanvas.style.display = 'block';
             
-            // Start animation
-            startAnimation();
+            // Reset camera position
+            camera.position.set(0, 0, 100);
+            camera.lookAt(0, 0, 0);
             
             // Apply a small rotation for better viewing angle
             scene.rotation.x = 0.2;
+            
+            // Start animation
+            startAnimation();
+            
+            // Force a render
+            renderer.render(scene, camera);
+            
+            console.log('Preview rendering complete');
         } catch (error) {
             console.error('Error creating preview:', error);
             throw error;
@@ -343,6 +428,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
         }
+        
+        console.log('Starting animation loop');
         
         function animate() {
             animationFrameId = requestAnimationFrame(animate);
@@ -381,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset camera view
     resetViewBtn.addEventListener('click', function() {
         if (camera) {
-            camera.position.set(0, 0, 150);
+            camera.position.set(0, 0, 100);
             camera.lookAt(0, 0, 0);
         }
         
