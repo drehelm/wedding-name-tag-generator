@@ -1,6 +1,6 @@
 {
   "name": "wedding-name-tag-generator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Web-based generator for 3D printable wedding name tags",
   "homepage": "https://drehelm.github.io/wedding-name-tag-generator",
   "repository": {
@@ -11,7 +11,13 @@
     "dev": "serve public",
     "build": "node build.js",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d ."
+    "deploy": "gh-pages -d .",
+    "manual-deploy": "node manual-deploy.js",
+    "deploy:prod": "node manual-deploy.js --target=gh-pages --message=\"Production deployment\"",
+    "deploy:dev": "node manual-deploy.js --target=dev-pages --message=\"Development deployment\"",
+    "deploy:test": "node manual-deploy.js --target=test-pages --message=\"Test deployment\"",
+    "create:develop": "git checkout -b develop && git push -u origin develop",
+    "create:feature": "node scripts/create-feature-branch.js"
   },
   "keywords": [
     "wedding",
