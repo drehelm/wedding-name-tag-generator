@@ -5,11 +5,22 @@ function createNameTagScene(name) {
   // Create a new THREE.js scene
   const scene = new THREE.Scene();
   
+  // Add lighting for better visualization
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambientLight);
+  
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(50, 50, 50);
+  scene.add(directionalLight);
+  
   // Add the clip to the scene
   const clipMesh = addClipToScene(scene);
   
-  // Add the text to the scene
+  // Add the text to the scene, positioned on top of the clip
   const textGroup = addTextToScene(scene, name);
+  
+  // Position text on the clip's top surface
+  textGroup.position.z = SVG_THICKNESS;
   
   return scene;
 }
@@ -72,9 +83,14 @@ function downloadSTL(name) {
   });
 }
 
-// Function to create a THREE.js scene for preview
+// Function to create a THREE.js scene for preview with better positioning
 function createPreviewScene(name) {
-  return createNameTagScene(name);
+  const scene = createNameTagScene(name);
+  
+  // Adjust the camera angle by positioning the model
+  scene.rotation.x = -Math.PI / 8; // Tilt slightly to show the 3D aspect better
+  
+  return scene;
 }
 
 // Function to process multiple names and generate STL files

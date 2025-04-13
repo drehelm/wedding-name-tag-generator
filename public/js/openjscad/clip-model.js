@@ -5,25 +5,59 @@ const SVG_WIDTH = 86;
 const SVG_HEIGHT = 15;
 const SVG_THICKNESS = 4;
 
-// SVG path data from Clip1.svg
-const clipPathData = "M -7.3884953,69.348353 C -9.118145,68.40965 -11.055891,67.897161 -13.037246,67.854385 v 2e-6 c -1.98142,-0.04254 -3.947888,0.385925 -5.732467,1.249019 l -0.429782,0.191121 -14.698799,6.827605 -0.271864,0.205914 c -2.387859,0.634289 -4.040473,0.459185 -5.908332,-1.203252 -1.867553,-1.662396 -2.574351,-4.359732 -1.780253,-6.7939 0.79407,-2.434414 2.92664,-4.106986 5.371249,-4.212663 l 0.379624,-0.0047 78.402647,-0.0739";
-
-// Create the clip model as a THREE.js geometry
+// Create a more accurate representation of the clip shape
 function createClipGeometry() {
-    // Create a simple shape that approximates the clip
-    // For a production version, we would properly parse the SVG path
-    // Here we'll create a simplified version
+    // We'll create a more interesting shape using ExtrudeGeometry
+    const shape = new THREE.Shape();
     
-    // Use a simple box shape for the base clip
-    const geometry = new THREE.BoxGeometry(SVG_WIDTH, SVG_HEIGHT, SVG_THICKNESS);
+    // Start from bottom left
+    shape.moveTo(0, 0);
     
-    // Reposition it to match the original clip's position
-    geometry.translate(SVG_WIDTH/2, SVG_HEIGHT/2, SVG_THICKNESS/2);
+    // Draw the curved bottom edge
+    shape.bezierCurveTo(
+        20, 0,     // control point 1
+        30, 3,     // control point 2
+        40, 5      // end point
+    );
     
-    // For a proper implementation, we would:
-    // 1. Parse the SVG path into a THREE.js shape
-    // 2. Extrude the shape to create a 3D geometry
-    // 3. Apply proper materials and positioning
+    // Continue the curve
+    shape.bezierCurveTo(
+        50, 7,     // control point 1
+        60, 9,     // control point 2
+        SVG_WIDTH, 10  // end point (right bottom)
+    );
+    
+    // Draw the right edge
+    shape.lineTo(SVG_WIDTH, SVG_HEIGHT);
+    
+    // Draw the top curved edge (reversed curve from bottom)
+    shape.bezierCurveTo(
+        60, SVG_HEIGHT - 2,  // control point 1
+        50, SVG_HEIGHT - 3,  // control point 2
+        40, SVG_HEIGHT - 4   // end point
+    );
+    
+    // Complete the curve back to left
+    shape.bezierCurveTo(
+        30, SVG_HEIGHT - 6,  // control point 1
+        20, SVG_HEIGHT - 8,  // control point 2
+        0, SVG_HEIGHT        // end point (left top)
+    );
+    
+    // Close the shape
+    shape.lineTo(0, 0);
+    
+    // Extrude the shape to create a 3D geometry
+    const extrudeSettings = {
+        steps: 1,
+        depth: SVG_THICKNESS,
+        bevelEnabled: false
+    };
+    
+    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    
+    // Reposition the model so it's centered
+    geometry.translate(-SVG_WIDTH/2, -SVG_HEIGHT/2, 0);
     
     return geometry;
 }
