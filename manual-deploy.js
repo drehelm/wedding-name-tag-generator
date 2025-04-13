@@ -15,12 +15,22 @@ function run(command) {
   }
 }
 
+// Function to run commands that return output
+function runWithOutput(command) {
+  try {
+    return { success: true, output: execSync(command).toString().trim() };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // Process command line arguments
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     target: 'gh-pages', // Default target branch
-    message: 'GitHub Pages deployment'
+    message: 'GitHub Pages deployment',
+    repoUrl: null // Will be set if provided via --repo flag
   };
   
   for (let i = 0; i < args.length; i++) {
@@ -31,11 +41,15 @@ function parseArgs() {
     } else if (arg === '--message' && i + 1 < args.length) {
       options.message = args[i + 1];
       i++;
+    } else if (arg === '--repo' && i + 1 < args.length) {
+      options.repoUrl = args[i + 1];
+      i++;
     } else if (arg === '--help') {
       console.log('Usage: node manual-deploy.js [options]');
       console.log('Options:');
       console.log('  --target BRANCH   Target branch for deployment (default: gh-pages)');
       console.log('  --message MESSAGE Commit message (default: "GitHub Pages deployment")');
+      console.log('  --repo URL        Repository URL (optional, falls back to git remote origin)');
       console.log('  --help            Show this help message');
       process.exit(0);
     }
@@ -62,17 +76,34 @@ try {
   console.log('\nDeploying to GitHub Pages...');
   
   // Make sure git is configured
-  const configCheck = execSync('git config user.name || echo "NOT_SET"').toString().trim();
-  if (configCheck === 'NOT_SET') {
+  const configCheck = runWithOutput('git config user.name || echo "NOT_SET"');
+  if (!configCheck.success || configCheck.output === 'NOT_SET') {
     console.log('Git user name not configured. Please run:');
     console.log('git config --global user.name "Your Name"');
     console.log('git config --global user.email "your.email@example.com"');
     process.exit(1);
   }
   
-  // Save current branch and stash any changes
-  const currentBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-  console.log(`Current branch: ${currentBranch}`);
+  // Get repository URL - either from args, remote origin, or ask user
+  let repoUrl = options.repoUrl;
+  if (!repoUrl) {
+    // Try to get from remote origin
+    const remoteCheck = runWithOutput('git config --get remote.origin.url');
+    if (remoteCheck.success) {
+      repoUrl = remoteCheck.output;
+      console.log(`Using repository URL from git remote: ${repoUrl}`);
+    } else {
+      console.error('No git remote origin found and no --repo option provided.');
+      console.error('Please either:');
+      console.error('1. Set up a git remote with: git remote add origin <your-repo-url>');
+      console.error('2. Run this command with the --repo option: npm run manual-deploy -- --repo=<your-repo-url>');
+      
+      // Use a fallback for local testing (create a local branch)
+      console.log('\nFalling back to local deployment for testing...');
+      console.log('This will create a local gh-pages branch but not push to remote.');
+      repoUrl = '';
+    }
+  }
   
   // Create a temp directory for deployment
   const deployDir = path.join(__dirname, '.deploy-temp');
@@ -118,28 +149,42 @@ try {
   const commitMessage = `${options.message} (v${version})`;
   execSync(`git commit -m "${commitMessage}" --allow-empty`);
   
-  // Add the remote
-  const repoUrl = execSync('git config --get remote.origin.url').toString().trim();
-  execSync(`git remote add origin ${repoUrl}`);
-  
-  // Push to the target branch
-  if (!run(`git push origin gh-pages:${options.target} --force`)) {
-    console.error(`Failed to push to ${options.target} branch`);
-    process.exit(1);
+  // If we have a repository URL, push to it
+  if (repoUrl) {
+    // Add the remote
+    execSync(`git remote add origin ${repoUrl}`);
+    
+    // Push to the target branch
+    if (!run(`git push origin gh-pages:${options.target} --force`)) {
+      console.error(`Failed to push to ${options.target} branch`);
+      process.exit(1);
+    }
+    
+    console.log('\nDeployment complete!');
+    
+    if (options.target === 'gh-pages') {
+      console.log('Your site should be available shortly at:');
+      
+      // Extract the GitHub username and repo from the URL
+      const match = repoUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+      if (match) {
+        const [, username, repo] = match;
+        console.log(`https://${username}.github.io/${repo}/`);
+      } else {
+        console.log('GitHub Pages URL depends on your repository name and owner.');
+      }
+    } else {
+      console.log(`Successfully deployed to '${options.target}' branch.`);
+    }
+  } else {
+    console.log('\nLocal branch created but not pushed to remote.');
+    console.log('To push manually, use:');
+    console.log('git push origin gh-pages:<target-branch> --force');
   }
   
   // Clean up: go back to original directory and remove temp folder
   process.chdir(__dirname);
   fs.removeSync(deployDir);
-  
-  console.log('\nDeployment complete!');
-  
-  if (options.target === 'gh-pages') {
-    console.log('Your site should be available shortly at:');
-    console.log(`https://drehelm.github.io/wedding-name-tag-generator/`);
-  } else {
-    console.log(`Successfully deployed to '${options.target}' branch.`);
-  }
   
 } catch (error) {
   console.error('Deployment failed:', error);
