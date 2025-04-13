@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Generate button click handler
-    generateBtn.addEventListener('click', function() {
+    generateBtn.addEventListener('click', async function() {
         // Double-check validation before proceeding
         if (!isValid && !validateNames()) {
             return;
@@ -210,37 +210,32 @@ document.addEventListener('DOMContentLoaded', function() {
         previewBtn.disabled = true;
         
         // Start processing with a slight delay to allow UI to update
-        setTimeout(() => {
-            processNames(names, updateProgress)
-                .then(result => {
-                    // Show completion message
-                    statusText.textContent = `Generated ${result.successful} of ${result.total} STL files.`;
-                    
-                    if (result.errors.length > 0) {
-                        const errorList = result.errors.map(err => `${err.name}: ${err.error}`).join('<br>');
-                        validationFeedback.innerHTML = `<strong>Errors during generation:</strong><br>${errorList}`;
-                        validationFeedback.style.display = 'block';
-                    }
-                    
-                    // Re-enable buttons
-                    validateBtn.disabled = false;
-                    generateBtn.disabled = !isValid;
-                    previewBtn.disabled = false;
-                    
-                    // Hide processing status after a delay
-                    setTimeout(() => {
-                        processingStatus.style.display = 'none';
-                    }, 5000);
-                })
-                .catch(error => {
-                    console.error('Error processing names:', error);
-                    statusText.textContent = 'An error occurred during processing.';
-                    
-                    // Re-enable buttons
-                    validateBtn.disabled = false;
-                    generateBtn.disabled = !isValid;
-                    previewBtn.disabled = false;
-                });
+        setTimeout(async () => {
+            try {
+                const result = await processNames(names, updateProgress);
+                
+                // Show completion message
+                statusText.textContent = `Generated ${result.successful} of ${result.total} STL files.`;
+                
+                if (result.errors.length > 0) {
+                    const errorList = result.errors.map(err => `${err.name}: ${err.error}`).join('<br>');
+                    validationFeedback.innerHTML = `<strong>Errors during generation:</strong><br>${errorList}`;
+                    validationFeedback.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error processing names:', error);
+                statusText.textContent = 'An error occurred during processing.';
+            } finally {
+                // Re-enable buttons
+                validateBtn.disabled = false;
+                generateBtn.disabled = !isValid;
+                previewBtn.disabled = false;
+                
+                // Hide processing status after a delay
+                setTimeout(() => {
+                    processingStatus.style.display = 'none';
+                }, 5000);
+            }
         }, 100);
     });
     
@@ -271,15 +266,11 @@ document.addEventListener('DOMContentLoaded', function() {
             renderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true });
             renderer.setSize(previewCanvas.clientWidth, previewCanvas.clientHeight);
             
-            // Create controls
-            if (THREE.OrbitControls) {
-                controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.enablePan = false;
-                controls.minDistance = 50;
-                controls.maxDistance = 200;
-            } else {
-                console.warn('OrbitControls not available');
-            }
+            // Create controls using our embedded OrbitControls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enablePan = false;
+            controls.minDistance = 50;
+            controls.maxDistance = 200;
             
             // Add lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -338,6 +329,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Start animation
             startAnimation();
+            
+            // Apply a small rotation for better viewing angle
+            scene.rotation.x = 0.2;
         } catch (error) {
             console.error('Error creating preview:', error);
             throw error;
@@ -396,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (scene) {
-            scene.rotation.set(0, 0, 0);
+            scene.rotation.set(0.2, 0, 0); // Keep slight x rotation for better view
         }
     });
     
