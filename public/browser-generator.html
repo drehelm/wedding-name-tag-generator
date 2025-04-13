@@ -11,6 +11,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@700&display=swap" rel="stylesheet">
     <meta name="version" content="1.1.0">
+    
+    <!-- Load THREE.js for 3D visualization - Using more reliable sources -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -130,10 +133,266 @@
         </footer>
     </div>
 
-    <!-- Load THREE.js for 3D visualization - Updated URLs to working versions -->
-    <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://unpkg.com/three@0.150.1/examples/js/exporters/STLExporter.js"></script>
+    <!-- OrbitControls script -->
+    <script>
+    // OrbitControls implementation
+    // This is a simplified version of OrbitControls directly included to avoid loading issues
+    class OrbitControls {
+        constructor(camera, domElement) {
+            this.camera = camera;
+            this.domElement = domElement;
+            this.target = new THREE.Vector3();
+            this.enablePan = true;
+            this.minDistance = 0;
+            this.maxDistance = Infinity;
+            
+            // Initialize event listeners
+            this.domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
+            this.domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
+            this.domElement.addEventListener('mouseup', this.onMouseUp.bind(this));
+            this.domElement.addEventListener('wheel', this.onMouseWheel.bind(this));
+            
+            // State variables
+            this.rotateStart = new THREE.Vector2();
+            this.rotateEnd = new THREE.Vector2();
+            this.rotateDelta = new THREE.Vector2();
+            this.isRotating = false;
+        }
+        
+        onMouseDown(event) {
+            this.isRotating = true;
+            this.rotateStart.set(event.clientX, event.clientY);
+        }
+        
+        onMouseMove(event) {
+            if (!this.isRotating) return;
+            
+            this.rotateEnd.set(event.clientX, event.clientY);
+            this.rotateDelta.subVectors(this.rotateEnd, this.rotateStart);
+            
+            // Rotate the camera
+            const element = this.domElement;
+            const rotateSpeed = 0.002;
+            
+            this.rotateLeft(2 * Math.PI * this.rotateDelta.x / element.clientWidth * rotateSpeed);
+            this.rotateUp(2 * Math.PI * this.rotateDelta.y / element.clientHeight * rotateSpeed);
+            
+            this.rotateStart.copy(this.rotateEnd);
+            this.update();
+        }
+        
+        onMouseUp() {
+            this.isRotating = false;
+        }
+        
+        onMouseWheel(event) {
+            const zoomSpeed = 0.05;
+            if (event.deltaY > 0) {
+                this.dollyOut(zoomSpeed);
+            } else {
+                this.dollyIn(zoomSpeed);
+            }
+            this.update();
+        }
+        
+        rotateLeft(angle) {
+            const quaternion = new THREE.Quaternion();
+            quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+            
+            // Get camera position relative to target
+            const offset = new THREE.Vector3();
+            offset.copy(this.camera.position).sub(this.target);
+            
+            // Apply rotation to offset
+            offset.applyQuaternion(quaternion);
+            
+            // Update camera position
+            this.camera.position.copy(this.target).add(offset);
+        }
+        
+        rotateUp(angle) {
+            const quaternion = new THREE.Quaternion();
+            
+            // Calculate axis perpendicular to camera's up vector and the direction to target
+            const offset = new THREE.Vector3();
+            offset.copy(this.camera.position).sub(this.target);
+            const axis = new THREE.Vector3();
+            axis.crossVectors(this.camera.up, offset).normalize();
+            
+            quaternion.setFromAxisAngle(axis, angle);
+            
+            // Apply rotation to offset
+            offset.applyQuaternion(quaternion);
+            
+            // Update camera position
+            this.camera.position.copy(this.target).add(offset);
+        }
+        
+        dollyIn(dollyScale) {
+            const offset = new THREE.Vector3();
+            offset.copy(this.camera.position).sub(this.target);
+            
+            // Scale the offset
+            const scale = Math.max(this.minDistance, Math.min(this.maxDistance, offset.length() * (1 - dollyScale)));
+            offset.normalize().multiplyScalar(scale);
+            
+            // Update camera position
+            this.camera.position.copy(this.target).add(offset);
+        }
+        
+        dollyOut(dollyScale) {
+            const offset = new THREE.Vector3();
+            offset.copy(this.camera.position).sub(this.target);
+            
+            // Scale the offset
+            const scale = Math.max(this.minDistance, Math.min(this.maxDistance, offset.length() * (1 + dollyScale)));
+            offset.normalize().multiplyScalar(scale);
+            
+            // Update camera position
+            this.camera.position.copy(this.target).add(offset);
+        }
+        
+        update() {
+            this.camera.lookAt(this.target);
+        }
+        
+        reset() {
+            this.target.set(0, 0, 0);
+            this.update();
+        }
+    }
+    </script>
+
+    <!-- Inline STL Export function to avoid issues with external dependencies -->
+    <script>
+    // STL Export implementation
+    class STLExporter {
+        parse(scene, options = {}) {
+            options = Object.assign({
+                binary: false
+            }, options);
+
+            const objects = [];
+            let triangles = 0;
+
+            scene.traverse(function(object) {
+                if (object.isMesh) {
+                    const geometry = object.geometry;
+                    
+                    if (geometry.isBufferGeometry) {
+                        const index = geometry.index;
+                        const positionAttribute = geometry.getAttribute('position');
+                        
+                        if (positionAttribute !== undefined) {
+                            let positions = positionAttribute.array;
+                            
+                            if (index !== null) {
+                                // Indexed geometry
+                                for (let i = 0; i < index.count; i += 3) {
+                                    objects.push({
+                                        v1: new THREE.Vector3().fromBufferAttribute(positionAttribute, index.getX(i)),
+                                        v2: new THREE.Vector3().fromBufferAttribute(positionAttribute, index.getX(i + 1)),
+                                        v3: new THREE.Vector3().fromBufferAttribute(positionAttribute, index.getX(i + 2)),
+                                        normal: new THREE.Vector3(0, 0, 0)
+                                    });
+                                    triangles++;
+                                }
+                            } else {
+                                // Non-indexed geometry
+                                for (let i = 0; i < positionAttribute.count; i += 3) {
+                                    objects.push({
+                                        v1: new THREE.Vector3().fromBufferAttribute(positionAttribute, i),
+                                        v2: new THREE.Vector3().fromBufferAttribute(positionAttribute, i + 1),
+                                        v3: new THREE.Vector3().fromBufferAttribute(positionAttribute, i + 2),
+                                        normal: new THREE.Vector3(0, 0, 0)
+                                    });
+                                    triangles++;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Calculate normals for each triangle
+            for (let i = 0; i < objects.length; i++) {
+                const obj = objects[i];
+                obj.normal.crossVectors(
+                    new THREE.Vector3().subVectors(obj.v2, obj.v1),
+                    new THREE.Vector3().subVectors(obj.v3, obj.v1)
+                ).normalize();
+            }
+
+            if (options.binary) {
+                // Binary STL
+                const bufferLength = 84 + (50 * triangles);
+                const buffer = new ArrayBuffer(bufferLength);
+                const view = new DataView(buffer);
+                
+                // Write header (80 bytes)
+                const encoder = new TextEncoder();
+                const header = encoder.encode('STL Binary by THREE.js STLExporter');
+                for (let i = 0; i < 80; i++) {
+                    view.setUint8(i, header[i] || 32); // 32 = space
+                }
+                
+                // Write number of triangles
+                view.setUint32(80, triangles, true);
+                
+                let offset = 84;
+                for (let i = 0; i < objects.length; i++) {
+                    const obj = objects[i];
+                    
+                    // Write normal
+                    view.setFloat32(offset, obj.normal.x, true); offset += 4;
+                    view.setFloat32(offset, obj.normal.y, true); offset += 4;
+                    view.setFloat32(offset, obj.normal.z, true); offset += 4;
+                    
+                    // Write vertices
+                    view.setFloat32(offset, obj.v1.x, true); offset += 4;
+                    view.setFloat32(offset, obj.v1.y, true); offset += 4;
+                    view.setFloat32(offset, obj.v1.z, true); offset += 4;
+                    
+                    view.setFloat32(offset, obj.v2.x, true); offset += 4;
+                    view.setFloat32(offset, obj.v2.y, true); offset += 4;
+                    view.setFloat32(offset, obj.v2.z, true); offset += 4;
+                    
+                    view.setFloat32(offset, obj.v3.x, true); offset += 4;
+                    view.setFloat32(offset, obj.v3.y, true); offset += 4;
+                    view.setFloat32(offset, obj.v3.z, true); offset += 4;
+                    
+                    // Attribute byte count (unused)
+                    view.setUint16(offset, 0, true); offset += 2;
+                }
+                
+                return buffer;
+            }
+            else {
+                // ASCII STL
+                let output = 'solid exported\n';
+                
+                for (let i = 0; i < objects.length; i++) {
+                    const obj = objects[i];
+                    
+                    output += 'facet normal ' + obj.normal.x + ' ' + obj.normal.y + ' ' + obj.normal.z + '\n';
+                    output += '\touter loop\n';
+                    output += '\t\tvertex ' + obj.v1.x + ' ' + obj.v1.y + ' ' + obj.v1.z + '\n';
+                    output += '\t\tvertex ' + obj.v2.x + ' ' + obj.v2.y + ' ' + obj.v2.z + '\n';
+                    output += '\t\tvertex ' + obj.v3.x + ' ' + obj.v3.y + ' ' + obj.v3.z + '\n';
+                    output += '\tendloop\n';
+                    output += 'endfacet\n';
+                }
+                
+                output += 'endsolid exported\n';
+                
+                return output;
+            }
+        }
+    }
+
+    // Make STLExporter available globally
+    THREE.STLExporter = STLExporter;
+    </script>
 
     <!-- App-specific scripts -->
     <script src="js/openjscad/clip-model.js"></script>
