@@ -1,0 +1,25 @@
+{
+  "name": "wedding-name-tag-generator",
+  "version": "1.0.0",
+  "description": "Web-based generator for 3D printable wedding name tags",
+  "main": "index.js",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "netlify build"
+  },
+  "keywords": [
+    "wedding",
+    "3d-printing",
+    "name-tags",
+    "openscad",
+    "customizer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "archiver": "^5.3.1"
+  },
+  "devDependencies": {
+    "netlify-cli": "^12.7.2"
+  }
+}

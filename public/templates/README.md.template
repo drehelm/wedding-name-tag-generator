@@ -1,0 +1,54 @@
+# Wedding Name Tag Generator
+
+## Overview
+This package contains everything you need to generate 3D printable name tags for your event. The names you entered ({{NAMES_COUNT}} total) have already been added to the script.
+
+## Prerequisites
+Before you can generate the name tags, you'll need to install:
+
+1. **OpenSCAD** - Download from https://www.openscad.org/downloads.html
+2. **Python 3** - Download from https://www.python.org/downloads/
+   - Windows users: Be sure to check "Add Python to PATH" during installation!
+3. **Stix Two Text Font** - Download from https://fonts.google.com/specimen/STIX+Two+Text
+   - Click "Download family" and install the STIXTwoText-Regular.ttf font
+
+## Generate Your STL Files
+
+### On Windows
+1. Open Command Prompt
+2. Navigate to the folder where you extracted this ZIP
+   ```
+   cd path\to\folder
+   ```
+3. Run the script:
+   ```
+   python generateNames.py
+   ```
+
+### On Mac/Linux
+1. Open Terminal
+2. Navigate to the folder where you extracted this ZIP
+   ```
+   cd path/to/folder
+   ```
+3. Run the script:
+   ```
+   python3 generateNames.py
+   ```
+
+The script will create a folder called `output_stls` containing all your name tags as individual STL files.
+
+## Troubleshooting
+- **OpenSCAD not found**: Verify it's installed. On Mac, check /Applications/OpenSCAD.app
+- **Python not recognized**: Reinstall Python 3 and ensure "Add Python to PATH" is selected (Windows)
+- **Font not working**: Make sure you installed the Stix Two Text font properly
+
+## 3D Printing Tips
+- Material: PETG works well (more springy than PLA)
+- Size: Consider scaling to 70% if using for standard wine glasses
+- Infill: 30% recommended
+- Layer Height: 0.2mm
+
+## Credits
+Generated using the Wedding Name Tag Generator web tool.
+Original project by ahelmer.

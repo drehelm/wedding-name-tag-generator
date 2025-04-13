@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wedding Name Tag Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Include JSZip library for client-side ZIP generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wedding Name Tag Generator</h1>
+            <p>Create personalized drink clip name tags for your event</p>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="nameForm">
+                    <div class="input-group">
+                        <label for="nameList">Enter Names (one per line):</label>
+                        <textarea id="nameList" rows="10" placeholder="JOHN&#10;JANE&#10;ALEX&#10;TAYLOR"></textarea>
+                        <p class="hint">Names work best in ALL CAPS</p>
+                    </div>
+                    
+                    <div class="actions">
+                        <button type="submit" id="generateBtn" disabled>Loading Templates...</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="instructions">
+                <h2>How It Works</h2>
+                <ol>
+                    <li>Enter your names (one per line)</li>
+                    <li>Click "Generate Name Tags"</li>
+                    <li>Download the ZIP file</li>
+                    <li>Follow the included instructions to create your 3D printable name tags</li>
+                </ol>
+            </div>
+
+            <div class="requirements">
+                <h2>Requirements</h2>
+                <p>To use the generated files, you'll need:</p>
+                <ul>
+                    <li><a href="https://www.openscad.org/downloads.html" target="_blank">OpenSCAD</a> - For generating 3D models</li>
+                    <li><a href="https://www.python.org/downloads/" target="_blank">Python 3</a> - For running the script</li>
+                    <li><a href="https://fonts.google.com/specimen/STIX+Two+Text" target="_blank">STIX Two Text Font</a> - Required for the text style</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer>
+            <p>Based on <a href="https://github.com/yourusername/name-tag-generator" target="_blank">Name Tag Generator</a> | <a href="https://github.com/yourusername/wedding-name-tag-generator" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
