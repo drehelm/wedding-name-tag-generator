@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wedding Name Tag Generator (v1.1.0) (v1.1.0)</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Include JSZip library for client-side ZIP generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <meta name="version" content="1.1.0">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wedding Name Tag Generator</h1>
+            <p>Create personalized drink clip name tags for your event</p>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="nameForm">
+                    <div class="input-group">
+                        <div class="label-with-count">
+                            <label for="nameList">Enter Names (one per line):</label>
+                            <span id="charCount">0/14 characters</span>
+                        </div>
+                        <textarea id="nameList" rows="10" placeholder="JOHN&#10;JANE&#10;ALEX&#10;TAYLOR"></textarea>
+                        <div id="validationFeedback" class="validation-feedback"></div>
+                        <div class="name-guidelines">
+                            <h3>Name Guidelines:</h3>
+                            <ul>
+                                <li>Names are automatically converted to uppercase</li>
+                                <li>Maximum 14 characters per name (shorter names display better)</li>
+                                <li>Only letters, numbers, spaces and hyphens allowed</li>
+                                <li>One name per line</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button type="button" id="validateBtn" class="validate-btn" disabled>Loading Templates...</button>
+                        <button type="submit" id="generateBtn" disabled>Generate Name Tags</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="instructions">
+                <h2>How It Works</h2>
+                <ol>
+                    <li>Enter your names (one per line)</li>
+                    <li>Click "Validate Names" to check for errors</li>
+                    <li>Click "Generate Name Tags" to create and download the ZIP file</li>
+                    <li>Follow the included instructions to create your 3D printable name tags</li>
+                </ol>
+            </div>
+
+            <div class="requirements">
+                <h2>Requirements</h2>
+                <p>To use the generated files, you'll need:</p>
+                <ul>
+                    <li><a href="https://www.openscad.org/downloads.html" target="_blank">OpenSCAD</a> - For generating 3D models</li>
+                    <li><a href="https://www.python.org/downloads/" target="_blank">Python 3</a> - For running the script</li>
+                    <li><a href="https://fonts.google.com/specimen/STIX+Two+Text" target="_blank">STIX Two Text Font</a> - Required for the text style</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer>
+            <div class="version-info">Version 1.1.0</div>
+            <p>Printables Link: <a href="https://www.printables.com/model/940296-wedding-drink-name-tags-generator-openscad" target="_blank">Dre3D @ Printables</a>></a></p>
+            <p>Based on <a href="https://github.com/drehelm/wedding-name-tag-generator" target="_blank">Name Tag Generator</a> | <a href="https://github.com/drehelm/wedding-name-tag-generator" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
