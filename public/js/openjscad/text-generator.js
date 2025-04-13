@@ -11,7 +11,17 @@ const TEXT_Y_OFFSET = 5;
 // Global font cache
 let cachedFont = null;
 
-// Load the default font - use a simpler approach with a single reliable font source
+// Create an array of possible font URLs to try in order
+const FONT_URLS = [
+    // Try using common fonts first
+    'https://cdn.jsdelivr.net/npm/three/examples/fonts/droid/droid_sans_bold.typeface.json', // More web-safe common font
+    'https://cdn.jsdelivr.net/npm/three/examples/fonts/gentilis_bold.typeface.json', // Clear letter shapes
+    'https://cdn.jsdelivr.net/npm/three/examples/fonts/helvetiker_bold.typeface.json', // Fallback helvetiker font
+    // Add threejs default font as final fallback
+    'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json'
+];
+
+// Load a font with multiple fallback options
 function loadFont() {
     console.log("Loading font...");
     
@@ -21,34 +31,73 @@ function loadFont() {
         return Promise.resolve(cachedFont);
     }
     
-    return new Promise((resolve, reject) => {
-        // Use the reliable helvetiker_bold font from three.js examples
-        const fontUrl = 'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json';
-        
+    // Try loading fonts in sequence until one succeeds
+    return tryLoadFontSequence(0);
+}
+
+// Recursive function to try loading fonts in sequence
+function tryLoadFontSequence(index) {
+    // If we've tried all fonts, create a manual fallback
+    if (index >= FONT_URLS.length) {
+        console.error("All font loading attempts failed");
+        return Promise.resolve(createManualFallbackFont());
+    }
+    
+    const fontUrl = FONT_URLS[index];
+    console.log(`Attempting to load font from: ${fontUrl}`);
+    
+    return new Promise((resolve) => {
         // Create a loader
         const loader = new THREE.FontLoader();
         
-        // Load the font
+        // Try to load this font
         loader.load(fontUrl, 
-            // onLoad callback
+            // onLoad callback - success!
             function(font) {
-                console.log("Font loaded successfully");
+                console.log(`Font loaded successfully from: ${fontUrl}`);
                 cachedFont = font;
                 resolve(font);
             },
             // onProgress callback
             undefined,
-            // onError callback
+            // onError callback - try next font
             function(err) {
-                console.error("Font loading error:", err);
-                // If loading fails, create individual letter meshes
-                createIndividualLetterGeometry("FALLBACK").then(resolve).catch(reject);
+                console.warn(`Failed to load font from ${fontUrl}:`, err);
+                // Try the next font in our array
+                tryLoadFontSequence(index + 1).then(resolve);
             }
         );
     });
 }
 
-// Create text geometry using TextGeometry - simpler approach
+// Create a manual fallback font if all loading attempts fail
+function createManualFallbackFont() {
+    console.log("Creating manual fallback font");
+    
+    // This is a very simplified font data structure just to avoid errors
+    const fontData = {
+        glyphs: {},
+        resolution: 100,
+        boundingBox: {
+            yMin: 0,
+            yMax: 10
+        }
+    };
+    
+    // For each letter, define a simple glyph
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -".split("");
+    
+    for (const char of chars) {
+        fontData.glyphs[char] = {
+            ha: getCharWidth(char) * 10,
+            o: [] // outline
+        };
+    }
+    
+    return fontData;
+}
+
+// Create true text geometry using TextGeometry
 async function createTextGeometry(text, size, thickness) {
     console.log("Creating text geometry for:", text);
     
@@ -81,84 +130,36 @@ async function createTextGeometry(text, size, thickness) {
         
     } catch(error) {
         console.error("Failed to create text geometry:", error);
-        return createFallbackTextGeometry(text, size, thickness);
+        return createLetterGeometries(text, size, thickness);
     }
 }
 
-// Create individual letter geometries as a last resort
-function createIndividualLetterGeometry(text) {
-    console.log("Creating individual letter geometries for:", text);
+// Create detailed letter shapes for each character - more sophisticated fallback
+function createLetterGeometries(text, size, thickness) {
+    console.log("Creating detailed letter geometries for:", text);
     
     // Create geometries for each letter
     const letterGeometries = [];
     let xOffset = 0;
+    const totalWidth = estimateTextWidth(text);
+    
+    // Start with negative offset to center the text
+    xOffset = -totalWidth / 2;
     
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
         
         // Size based on character width
-        const width = getCharWidth(char);
-        const height = FONT_SIZE;
+        const width = getCharWidth(char) * (size / 5);
+        const height = size;
         
-        // Create individual letter
-        const shape = new THREE.Shape();
-        
-        // Draw more letter-like shapes instead of just rectangles
-        if ("AEFHIKLMNTVWXYZ".includes(char)) {
-            // Letters with diagonal strokes
-            shape.moveTo(0, 0);
-            shape.lineTo(width/3, height);
-            shape.lineTo(2*width/3, height);
-            shape.lineTo(width, 0);
-            shape.lineTo(3*width/4, 0);
-            shape.lineTo(2*width/3, height/3);
-            shape.lineTo(width/3, height/3);
-            shape.lineTo(width/4, 0);
-            shape.lineTo(0, 0);
-        } 
-        else if ("BDOPQRSU".includes(char)) {
-            // Rounded letters
-            shape.moveTo(0, 0);
-            shape.lineTo(0, height);
-            shape.lineTo(3*width/4, height);
-            shape.bezierCurveTo(
-                width, height,
-                width, height/2,
-                3*width/4, 0
-            );
-            shape.lineTo(0, 0);
-        }
-        else if ("CGJ".includes(char)) {
-            // Letters with hooks
-            shape.moveTo(width, height/4);
-            shape.lineTo(3*width/4, 0);
-            shape.lineTo(width/4, 0);
-            shape.lineTo(0, height/4);
-            shape.lineTo(0, 3*height/4);
-            shape.lineTo(width/4, height);
-            shape.lineTo(width, height);
-            
-        } 
-        else {
-            // Default letter shape (simple rectangle with some features)
-            shape.moveTo(0, 0);
-            shape.lineTo(0, height);
-            shape.lineTo(width, height);
-            shape.lineTo(width, 0);
-            shape.lineTo(0, 0);
-            
-            // Add some details to make it look more like a letter
-            shape.moveTo(width/4, height/4);
-            shape.lineTo(3*width/4, height/4);
-            shape.lineTo(3*width/4, 3*height/4);
-            shape.lineTo(width/4, 3*height/4);
-            shape.lineTo(width/4, height/4);
-        }
+        // Create a shape for this letter
+        const letterShape = createLetterShape(char, width, height);
         
         // Extrude settings
         const extrudeSettings = {
             steps: 1,
-            depth: TEXT_THICKNESS,
+            depth: thickness,
             bevelEnabled: true,
             bevelThickness: 0.2,
             bevelSize: 0.1,
@@ -167,7 +168,7 @@ function createIndividualLetterGeometry(text) {
         };
         
         // Create extruded geometry
-        const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const geometry = new THREE.ExtrudeGeometry(letterShape, extrudeSettings);
         geometry.translate(xOffset, 0, 0);
         letterGeometries.push(geometry);
         
@@ -175,83 +176,411 @@ function createIndividualLetterGeometry(text) {
         xOffset += width * 1.2;
     }
     
-    // Merge geometries if we have BufferGeometryUtils
-    if (BufferGeometryUtils && BufferGeometryUtils.mergeBufferGeometries) {
+    // Merge geometries if possible
+    if (typeof BufferGeometryUtils !== 'undefined' && 
+        BufferGeometryUtils.mergeBufferGeometries) {
         return BufferGeometryUtils.mergeBufferGeometries(letterGeometries);
     } else {
-        // Return the first geometry if we can't merge
-        const group = new THREE.Group();
-        letterGeometries.forEach(geo => {
-            const mesh = new THREE.Mesh(
-                geo, 
-                new THREE.MeshStandardMaterial({
-                    color: 0x333333,
-                    metalness: 0.2,
-                    roughness: 0.7
-                })
-            );
-            group.add(mesh);
-        });
-        return group;
-    }
-}
-
-// Create a fallback text geometry for when the font fails to load
-function createFallbackTextGeometry(text, size, thickness) {
-    console.log("Creating fallback text geometry for:", text);
-    
-    // A simpler approximation of letters - make it clear these are letters
-    // by creating individual shapes for each letter
-    
-    // Calculate the total width
-    let totalWidth = 0;
-    for (let i = 0; i < text.length; i++) {
-        totalWidth += getCharWidth(text[i]) * 1.2; // Add 20% spacing
-    }
-    totalWidth = totalWidth * size / 5; // Scale with font size
-    
-    // Create individual letter shapes
-    const group = new THREE.Group();
-    let xOffset = -totalWidth / 2; // Center the text
-    
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const width = getCharWidth(char) * size / 5;
-        const height = size;
+        // Return a group of letter meshes
+        const letterGroup = new THREE.Group();
         
-        // For each letter, create a more distinctive shape
-        const letterGeometry = new THREE.BoxGeometry(width * 0.8, height, thickness);
-        const letterMaterial = new THREE.MeshStandardMaterial({
+        // Material for all letters
+        const material = new THREE.MeshStandardMaterial({
             color: 0x333333,
             metalness: 0.2,
             roughness: 0.7
         });
         
-        const letterMesh = new THREE.Mesh(letterGeometry, letterMaterial);
-        letterMesh.position.set(xOffset + width/2, 0, 0);
+        // Add each letter as a separate mesh
+        letterGeometries.forEach(geo => {
+            const mesh = new THREE.Mesh(geo, material);
+            letterGroup.add(mesh);
+        });
         
-        // Add distinguishing feature to make it obvious these are letters
-        if ("AEFHIKLMNTVWXYZ".includes(char)) {
-            // Add a diagonal line for these letters
-            const lineGeometry = new THREE.BoxGeometry(width * 0.8, thickness/2, thickness/2);
-            const line = new THREE.Mesh(lineGeometry, letterMaterial);
-            line.rotation.z = Math.PI / 4;
-            line.position.set(0, 0, thickness/2);
-            letterMesh.add(line);
-        } 
-        else if ("BDOPQRSU".includes(char)) {
-            // Add a small box for these letters
-            const boxGeometry = new THREE.BoxGeometry(width * 0.4, height * 0.4, thickness/2);
-            const box = new THREE.Mesh(boxGeometry, letterMaterial);
-            box.position.set(0, height * 0.2, thickness/2);
-            letterMesh.add(box);
-        }
+        return letterGroup;
+    }
+}
+
+// Create a shape for a specific letter
+function createLetterShape(char, width, height) {
+    const shape = new THREE.Shape();
+    
+    // Different letter shapes based on the character
+    switch (char) {
+        case 'A':
+            // Triangle with crossbar
+            shape.moveTo(0, 0);
+            shape.lineTo(width/2, height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0.8*width, 0);
+            shape.lineTo(0.5*width, 0.7*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            // Add crossbar (as a separate shape)
+            const crossbar = new THREE.Path();
+            crossbar.moveTo(0.2*width, 0.4*height);
+            crossbar.lineTo(0.8*width, 0.4*height);
+            crossbar.lineTo(0.8*width, 0.5*height);
+            crossbar.lineTo(0.2*width, 0.5*height);
+            crossbar.lineTo(0.2*width, 0.4*height);
+            shape.holes.push(crossbar);
+            break;
+            
+        case 'B':
+            // B shape with two rounded sections
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.7*width, height);
+            shape.bezierCurveTo(
+                width, height,
+                width, 0.6*height,
+                0.7*width, 0.55*height
+            );
+            shape.bezierCurveTo(
+                width, 0.5*height, 
+                width, 0, 
+                0.7*width, 0
+            );
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'C':
+            // C shape
+            shape.moveTo(width, 0.25*height);
+            shape.bezierCurveTo(
+                0.8*width, 0,
+                0.2*width, 0,
+                0, 0.25*height
+            );
+            shape.bezierCurveTo(
+                -0.2*width, 0.5*height,
+                -0.2*width, 0.5*height,
+                0, 0.75*height
+            );
+            shape.bezierCurveTo(
+                0.2*width, height,
+                0.8*width, height,
+                width, 0.75*height
+            );
+            break;
+            
+        case 'D':
+            // D shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.6*width, height);
+            shape.bezierCurveTo(
+                width, height,
+                width, 0.5*height,
+                width, 0
+            );
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'E':
+            // E shape
+            shape.moveTo(width, 0);
+            shape.lineTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0.85*height);
+            shape.lineTo(0.2*width, 0.85*height);
+            shape.lineTo(0.2*width, 0.55*height);
+            shape.lineTo(0.8*width, 0.55*height);
+            shape.lineTo(0.8*width, 0.45*height);
+            shape.lineTo(0.2*width, 0.45*height);
+            shape.lineTo(0.2*width, 0.15*height);
+            shape.lineTo(width, 0.15*height);
+            shape.lineTo(width, 0);
+            break;
+            
+        case 'F':
+            // F shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0.85*height);
+            shape.lineTo(0.2*width, 0.85*height);
+            shape.lineTo(0.2*width, 0.55*height);
+            shape.lineTo(0.8*width, 0.55*height);
+            shape.lineTo(0.8*width, 0.45*height);
+            shape.lineTo(0.2*width, 0.45*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'G':
+            // G shape
+            shape.moveTo(width, 0.25*height);
+            shape.bezierCurveTo(
+                0.8*width, 0,
+                0.2*width, 0,
+                0, 0.25*height
+            );
+            shape.bezierCurveTo(
+                -0.2*width, 0.5*height,
+                -0.2*width, 0.5*height,
+                0, 0.75*height
+            );
+            shape.bezierCurveTo(
+                0.2*width, height,
+                0.8*width, height,
+                width, 0.75*height
+            );
+            shape.lineTo(width, 0.4*height);
+            shape.lineTo(0.5*width, 0.4*height);
+            shape.lineTo(0.5*width, 0.5*height);
+            shape.lineTo(0.8*width, 0.5*height);
+            shape.lineTo(0.8*width, 0.25*height);
+            break;
+            
+        case 'H':
+            // H shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.2*width, height);
+            shape.lineTo(0.2*width, 0.55*height);
+            shape.lineTo(0.8*width, 0.55*height);
+            shape.lineTo(0.8*width, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0.8*width, 0);
+            shape.lineTo(0.8*width, 0.45*height);
+            shape.lineTo(0.2*width, 0.45*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'I':
+            // I shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'J':
+            // J shape
+            shape.moveTo(0, 0.25*height);
+            shape.bezierCurveTo(
+                0.2*width, 0,
+                0.8*width, 0,
+                width, 0.25*height
+            );
+            shape.lineTo(width, height);
+            shape.lineTo(0.8*width, height);
+            shape.lineTo(0.8*width, 0.25*height);
+            shape.bezierCurveTo(
+                0.7*width, 0.15*height,
+                0.3*width, 0.15*height,
+                0.2*width, 0.25*height
+            );
+            shape.lineTo(0, 0.25*height);
+            break;
+            
+        case 'K':
+            // K shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.2*width, height);
+            shape.lineTo(0.2*width, 0.6*height);
+            shape.lineTo(0.7*width, height);
+            shape.lineTo(width, height);
+            shape.lineTo(0.4*width, 0.5*height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0.7*width, 0);
+            shape.lineTo(0.2*width, 0.4*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'L':
+            // L shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.2*width, height);
+            shape.lineTo(0.2*width, 0.15*height);
+            shape.lineTo(width, 0.15*height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'M':
+            // M shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.2*width, height);
+            shape.lineTo(0.5*width, 0.4*height);
+            shape.lineTo(0.8*width, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0.8*width, 0);
+            shape.lineTo(0.8*width, 0.8*height);
+            shape.lineTo(0.5*width, 0.2*height);
+            shape.lineTo(0.2*width, 0.8*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'N':
+            // N shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.2*width, height);
+            shape.lineTo(0.8*width, 0.2*height);
+            shape.lineTo(0.8*width, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0.8*width, 0);
+            shape.lineTo(0.2*width, 0.8*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'O':
+            // O shape
+            shape.moveTo(0, 0.25*height);
+            shape.bezierCurveTo(
+                0.2*width, 0,
+                0.8*width, 0,
+                width, 0.25*height
+            );
+            shape.bezierCurveTo(
+                1.2*width, 0.5*height,
+                1.2*width, 0.5*height,
+                width, 0.75*height
+            );
+            shape.bezierCurveTo(
+                0.8*width, height,
+                0.2*width, height,
+                0, 0.75*height
+            );
+            shape.bezierCurveTo(
+                -0.2*width, 0.5*height,
+                -0.2*width, 0.5*height,
+                0, 0.25*height
+            );
+            break;
+            
+        // Add specific shapes for P, Q, R, S, T, U, V, W, X, Y, Z
+        // For brevity, I'll just include a few more key letters people might use
         
-        group.add(letterMesh);
-        xOffset += width * 1.2; // Add some spacing between letters
+        case 'P':
+            // P shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.7*width, height);
+            shape.bezierCurveTo(
+                width, height,
+                width, 0.7*height,
+                0.7*width, 0.5*height
+            );
+            shape.lineTo(0.2*width, 0.5*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'R':
+            // R shape
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(0.7*width, height);
+            shape.bezierCurveTo(
+                width, height,
+                width, 0.7*height,
+                0.7*width, 0.5*height
+            );
+            shape.lineTo(width, 0);
+            shape.lineTo(0.8*width, 0);
+            shape.lineTo(0.5*width, 0.5*height);
+            shape.lineTo(0.2*width, 0.5*height);
+            shape.lineTo(0.2*width, 0);
+            shape.lineTo(0, 0);
+            break;
+            
+        case 'S':
+            // S shape
+            shape.moveTo(0, 0.25*height);
+            shape.bezierCurveTo(
+                0.2*width, 0,
+                0.8*width, 0,
+                width, 0.25*height
+            );
+            shape.bezierCurveTo(
+                1.2*width, 0.4*height,
+                0.8*width, 0.6*height,
+                0.5*width, 0.5*height
+            );
+            shape.bezierCurveTo(
+                0.2*width, 0.4*height,
+                -0.2*width, 0.6*height,
+                0, 0.75*height
+            );
+            shape.bezierCurveTo(
+                0.2*width, height,
+                0.8*width, height,
+                width, 0.75*height
+            );
+            break;
+            
+        case 'T':
+            // T shape
+            shape.moveTo(0, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0.85*height);
+            shape.lineTo(0.6*width, 0.85*height);
+            shape.lineTo(0.6*width, 0);
+            shape.lineTo(0.4*width, 0);
+            shape.lineTo(0.4*width, 0.85*height);
+            shape.lineTo(0, 0.85*height);
+            shape.lineTo(0, height);
+            break;
+            
+        case 'U':
+            // U shape
+            shape.moveTo(0, height);
+            shape.lineTo(0.2*width, height);
+            shape.lineTo(0.2*width, 0.25*height);
+            shape.bezierCurveTo(
+                0.2*width, 0.1*height,
+                0.8*width, 0.1*height,
+                0.8*width, 0.25*height
+            );
+            shape.lineTo(0.8*width, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0.25*height);
+            shape.bezierCurveTo(
+                width, 0,
+                0, 0,
+                0, 0.25*height
+            );
+            shape.lineTo(0, height);
+            break;
+            
+        // For numerals and other characters, create simplified shapes
+        // For example, for 0-9 we'll create shapes that resemble the numerals
+            
+        default:
+            // Default letter shape (a rectangle with some details)
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height);
+            shape.lineTo(width, height);
+            shape.lineTo(width, 0);
+            shape.lineTo(0, 0);
+            
+            // Add some details inside to make it look like a character
+            const hole = new THREE.Path();
+            hole.moveTo(0.3*width, 0.3*height);
+            hole.lineTo(0.7*width, 0.3*height);
+            hole.lineTo(0.7*width, 0.7*height);
+            hole.lineTo(0.3*width, 0.7*height);
+            hole.lineTo(0.3*width, 0.3*height);
+            shape.holes.push(hole);
+            break;
     }
     
-    return group;
+    return shape;
 }
 
 // Function to estimate text width based on the OpenSCAD template logic
@@ -314,20 +643,20 @@ async function createTextGroup(text) {
     const group = new THREE.Group();
     
     try {
-        // Create actual text geometry - now with proper TextGeometry
-        const textGeometry = await createTextGeometry(text, FONT_SIZE, TEXT_THICKNESS);
+        // Get text geometry or group
+        const textGeometryOrGroup = await createTextGeometry(text, FONT_SIZE, TEXT_THICKNESS);
         
-        // If textGeometry is a mesh or group, add it directly
-        if (textGeometry instanceof THREE.Group) {
-            group.add(textGeometry);
+        // If it's a group, add it directly
+        if (textGeometryOrGroup instanceof THREE.Group) {
+            group.add(textGeometryOrGroup);
         } else {
-            // Otherwise create a mesh with the geometry
+            // Otherwise create a mesh
             const textMaterial = new THREE.MeshStandardMaterial({
                 color: 0x333333,
                 metalness: 0.2,
                 roughness: 0.7
             });
-            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            const textMesh = new THREE.Mesh(textGeometryOrGroup, textMaterial);
             group.add(textMesh);
         }
         
@@ -347,30 +676,15 @@ async function createTextGroup(text) {
         console.log("Text group created successfully");
     } catch (error) {
         console.error("Error in createTextGroup:", error);
-        // Create a fallback with individual letters
-        const fallbackText = await createIndividualLetterGeometry(text);
-        if (fallbackText instanceof THREE.Group) {
-            group.add(fallbackText);
-        } else {
-            const material = new THREE.MeshStandardMaterial({
-                color: 0x333333,
-                metalness: 0.2,
-                roughness: 0.7
-            });
-            const mesh = new THREE.Mesh(fallbackText, material);
-            group.add(mesh);
-        }
-        
-        // Still add an underline
-        const textWidth = estimateTextWidth(text);
-        const underlineGeometry = createUnderlineGeometry(textWidth, UNDERLINE_THICKNESS, TEXT_THICKNESS);
-        const underlineMaterial = new THREE.MeshStandardMaterial({
-            color: 0x333333,
+        // Create a error indicator
+        const errorBox = new THREE.BoxGeometry(30, 5, 2);
+        const errorMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff0000, // Red for error
             metalness: 0.2,
             roughness: 0.7
         });
-        const underlineMesh = new THREE.Mesh(underlineGeometry, underlineMaterial);
-        group.add(underlineMesh);
+        const errorMesh = new THREE.Mesh(errorBox, errorMaterial);
+        group.add(errorMesh);
     }
     
     return group;
@@ -393,14 +707,13 @@ async function addTextToScene(scene, name) {
     } catch (error) {
         console.error("Error adding text to scene:", error);
         
-        // Add a text label to indicate something went wrong 
-        // but still provide SOME visual feedback
+        // Add a error indicator
         const message = new THREE.Group();
         
         // Add a message box
         const messageGeometry = new THREE.BoxGeometry(30, 5, 2);
         const messageMaterial = new THREE.MeshStandardMaterial({
-            color: 0xff0000, // Red to indicate error
+            color: 0xff0000, // Red for error
             metalness: 0.2,
             roughness: 0.7
         });
