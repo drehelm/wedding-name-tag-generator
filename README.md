@@ -2,6 +2,7 @@
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Ready-brightgreen)](GITHUB_PAGES_DEPLOYMENT.md)
 [![3D Printing](https://img.shields.io/badge/3D%20Printing-Ready-blue)](https://www.printables.com)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED)](DOCKER_SETUP.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <p align="center">
@@ -32,12 +33,21 @@ Custom 3D printable name tags for wedding seat placements - easily generate doze
 
 ## 🚀 Quick Start
 
-### Option 1: Use the Web Interface (Easiest)
+### Option 1: Use the Web Interface with Docker (Easiest)
+1. Clone this repository
+2. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+3. Run `npm run dev` - everything starts automatically!
+4. Visit http://localhost:3000
+5. Generate STL files directly in your browser
+
+See [Docker Setup Guide](DOCKER_SETUP.md) for details.
+
+### Option 2: Use the Web Interface (GitHub Pages)
 1. Visit the web interface (or [deploy your own](GITHUB_PAGES_DEPLOYMENT.md))
 2. Enter names (one per line)
 3. Download the ZIP file and follow the instructions
 
-### Option 2: Manual Setup (Advanced)
+### Option 3: Manual Setup (Advanced)
 
 #### ✅ Prerequisites
 

@@ -156,6 +156,22 @@ button:disabled {
     background-color: #bdc3c7;
 }
 
+.stl-btn {
+    background-color: #9b59b6;
+}
+
+.stl-btn:hover {
+    background-color: #8e44ad;
+}
+
+.stl-btn:disabled {
+    background-color: #bdc3c7;
+}
+
+.stl-btn.error {
+    background-color: #e74c3c;
+}
+
 .instructions {
     background-color: #f9f9f9;
     padding: 20px;

@@ -8,7 +8,15 @@
     "url": "git+https://github.com/drehelm/wedding-name-tag-generator.git"
   },
   "scripts": {
-    "dev": "serve src",
+    "dev": "npm run docker:check && npm run docker:start && npm run frontend",
+    "docker:check": "node -e \"require('child_process').exec('docker info', (err) => { if(err) { console.log('\\n⚠️  Docker Desktop ist nicht gestartet!\\n👉 Bitte starte Docker Desktop und versuche es erneut.\\n'); process.exit(1); } })\"",
+    "frontend": "serve src",
+    "server": "node server.js",
+    "server:dev": "nodemon server.js",
+    "docker:start": "docker-compose up -d --build",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "npm run docker:stop && npm run docker:start",
     "build": "node build.js",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
@@ -29,12 +37,15 @@
   "author": "drehelm",
   "license": "MIT",
   "dependencies": {
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "fs-extra": "^11.1.1"
   },
   "devDependencies": {
-    "fs-extra": "^11.1.1",
     "gh-pages": "^5.0.0",
-    "serve": "^14.2.0"
+    "serve": "^14.2.0",
+    "nodemon": "^2.0.22"
   },
   "bugs": {
     "url": "https://github.com/drehelm/wedding-name-tag-generator/issues"
