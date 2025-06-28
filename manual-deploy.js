@@ -69,7 +69,7 @@ try {
   const version = packageJson.version;
   console.log(`Deploying version: ${version}`);
   
-  // Build the project - this copies files from /public to root
+  // Build the project - this builds from /src to /dist
   console.log('Building project...');
   require('./build.js');
   
@@ -116,28 +116,15 @@ try {
   // Create the temp directory
   fs.mkdirSync(deployDir);
   
-  // Copy only the files needed for GitHub Pages to the temp directory
-  // This prevents us from accidentally deleting local files
-  const filesToDeploy = [
-    'index.html',
-    'styles.css',
-    'script.js',
-    'templates',
-    'images'
-  ];
+  // Copy all files from dist directory to the temp directory
+  const distDir = path.join(__dirname, 'dist');
   
-  for (const file of filesToDeploy) {
-    const sourcePath = path.join(__dirname, file);
-    const destPath = path.join(deployDir, file);
-    
-    if (fs.existsSync(sourcePath)) {
-      if (fs.statSync(sourcePath).isDirectory()) {
-        fs.copySync(sourcePath, destPath);
-      } else {
-        fs.copyFileSync(sourcePath, destPath);
-      }
-    }
+  if (!fs.existsSync(distDir)) {
+    throw new Error('dist directory does not exist. Please run npm run build first.');
   }
+  
+  // Copy all contents from dist to deployDir
+  fs.copySync(distDir, deployDir);
   
   // Initialize a new git repo in the temp directory
   process.chdir(deployDir);

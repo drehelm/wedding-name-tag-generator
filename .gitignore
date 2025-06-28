@@ -29,6 +29,9 @@ Thumbs.db
 # Build folder
 dist/
 
+# Temp folder
+temp/
+
 # Backup files
 *.bak
 
