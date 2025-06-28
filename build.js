@@ -1,23 +1,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-// Files to preserve during build (not to be overwritten)
-const filesToPreserve = [
-  'README.md',
-  'GITHUB_PAGES_DEPLOYMENT.md',
-  'DEVELOPMENT_WORKFLOW.md',
-  'VERSION.md',
-  'LICENSE',
-  'package.json',
-  'package-lock.json',
-  'node_modules',
-  '.git',
-  '.gitignore',
-  'build.js',
-  'manual-deploy.js',
-  'scripts',
-  'test-version-injection.js'
-];
+// Output directory for build
+const outputDir = path.join(__dirname, 'dist');
 
 async function build() {
   console.log('Starting build process...');
@@ -31,27 +16,25 @@ async function build() {
     console.log(`Building version: ${version}`);
     console.log(`Build timestamp: ${buildDate}`);
     
-    // Source directory (public)
-    const sourceDir = path.join(__dirname, 'public');
+    // Source directory (src)
+    const sourceDir = path.join(__dirname, 'src');
     
     // Check if source directory exists
     if (!fs.existsSync(sourceDir)) {
       throw new Error(`Source directory '${sourceDir}' does not exist`);
     }
     
-    // Get all files in public directory
+    // Ensure output directory exists and is clean
+    await fs.emptyDir(outputDir);
+    console.log(`Created/cleaned output directory: ${outputDir}`);
+    
+    // Get all files in src directory
     const files = fs.readdirSync(sourceDir);
     
-    // Process each file in the public directory
+    // Process each file in the src directory
     for (const file of files) {
       const sourcePath = path.join(sourceDir, file);
-      const destPath = path.join(__dirname, file);
-      
-      // Skip if this is a file to preserve
-      if (filesToPreserve.includes(file)) {
-        console.log(`Preserving existing file: ${file}`);
-        continue;
-      }
+      const destPath = path.join(outputDir, file);
       
       // If it's a directory, copy recursively
       if (fs.statSync(sourcePath).isDirectory()) {
