@@ -8,10 +8,10 @@
     "url": "git+https://github.com/drehelm/wedding-name-tag-generator.git"
   },
   "scripts": {
-    "dev": "serve public",
+    "dev": "serve src",
     "build": "node build.js",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d .",
+    "deploy": "gh-pages -d dist",
     "manual-deploy": "node manual-deploy.js",
     "deploy:prod": "node manual-deploy.js --target=gh-pages --message=\"Production deployment\"",
     "deploy:dev": "node manual-deploy.js --target=dev-pages --message=\"Development deployment\"",
