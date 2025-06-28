@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const validationFeedback = document.getElementById('validationFeedback');
     const charCount = document.getElementById('charCount');
     const validateBtn = document.getElementById('validateBtn');
+    const generateSTLBtn = document.getElementById('generateSTLBtn');
     
     let isValid = false;
     const MAX_CHARS = 14;
@@ -50,55 +51,56 @@ document.addEventListener('DOMContentLoaded', function() {
         // Visually indicate if line is too long
         if (currentLine.length > MAX_CHARS) {
             charCount.style.color = '#e74c3c';
+        } else if (currentLine.length > MAX_CHARS * 0.8) {
+            charCount.style.color = '#f39c12';
         } else {
             charCount.style.color = '#666';
         }
+        
+        // Clear validation state when user modifies input
+        isValid = false;
+        generateBtn.disabled = true;
+        generateSTLBtn.disabled = true;
+        validateBtn.classList.remove('validated');
+        validateBtn.textContent = 'Validate Names';
+        hideValidationError();
     });
-    
-    // Validate names function
+
     function validateNames() {
-        const names = nameList.value.trim().split('\n').filter(name => name.trim() !== '');
+        const text = nameList.value.trim();
+        
+        if (!text) {
+            showValidationError('Please enter at least one name.');
+            return false;
+        }
+        
+        const names = text.split('\n').filter(name => name.trim() !== '');
         
         if (names.length === 0) {
-            showValidationError('Please enter at least one name');
+            showValidationError('Please enter at least one name.');
             return false;
         }
         
         // Check each name
-        const invalidNames = [];
-        const tooLongNames = [];
-        
         for (let i = 0; i < names.length; i++) {
-            const name = names[i];
+            const name = names[i].trim();
             
-            // Check length
+            // Check if the name is too long
             if (name.length > MAX_CHARS) {
-                tooLongNames.push(`Line ${i+1}: "${name}" (${name.length} characters)`);
+                showValidationError(`Line ${i + 1}: "${name}" is too long (${name.length} characters). Maximum is ${MAX_CHARS} characters.`);
+                return false;
             }
             
-            // Check for invalid characters (only letters, numbers, spaces, and hyphens allowed)
-            if (!/^[A-Z0-9 -]+$/.test(name)) {
-                invalidNames.push(`Line ${i+1}: "${name}" (contains invalid characters)`);
+            // Check for invalid characters
+            const validPattern = /^[A-Z0-9\s-]+$/;
+            if (!validPattern.test(name)) {
+                const invalidChars = name.split('').filter(char => !validPattern.test(char));
+                const uniqueInvalidChars = [...new Set(invalidChars)];
+                const errorMessage = `Line ${i + 1}: "${name}" contains invalid characters: ${uniqueInvalidChars.join(', ')}<br>Only letters, numbers, spaces, and hyphens are allowed.`;
+                
+                showValidationError(errorMessage);
+                return false;
             }
-        }
-        
-        // Show validation errors if any
-        if (tooLongNames.length > 0 || invalidNames.length > 0) {
-            let errorMessage = '';
-            
-            if (tooLongNames.length > 0) {
-                errorMessage += `<strong>Names exceeding ${MAX_CHARS} characters:</strong><br>`;
-                errorMessage += tooLongNames.join('<br>') + '<br><br>';
-            }
-            
-            if (invalidNames.length > 0) {
-                errorMessage += '<strong>Names with invalid characters:</strong><br>';
-                errorMessage += invalidNames.join('<br>') + '<br><br>';
-                errorMessage += 'Only uppercase letters, numbers, spaces, and hyphens are allowed.';
-            }
-            
-            showValidationError(errorMessage);
-            return false;
         }
         
         // All names are valid
@@ -111,12 +113,14 @@ document.addEventListener('DOMContentLoaded', function() {
         validationFeedback.style.display = 'block';
         isValid = false;
         generateBtn.disabled = true;
+        generateSTLBtn.disabled = true;
     }
     
     function hideValidationError() {
         validationFeedback.style.display = 'none';
         isValid = true;
         generateBtn.disabled = false;
+        generateSTLBtn.disabled = false;
     }
     
     // Add validation button click handler
@@ -149,61 +153,140 @@ document.addEventListener('DOMContentLoaded', function() {
         generateBtn.textContent = 'Generating...';
         generateBtn.disabled = true;
         
-        // Generate package
-        generatePackage(names)
-            .then(() => {
-                // Reset button
-                generateBtn.textContent = 'Generate Name Tags';
-                generateBtn.disabled = !isValid;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('There was an error generating your name tags. Please try again.');
-                
-                // Reset button
-                generateBtn.textContent = 'Generate Name Tags';
-                generateBtn.disabled = !isValid;
-            });
-    });
-    
-    // Function to generate and download the package
-    async function generatePackage(names) {
         try {
-            // Create a new ZIP file using JSZip
-            const JSZip = window.JSZip;
+            // Create a new ZIP file
             const zip = new JSZip();
             
-            // Add SCAD template
-            zip.file('templatev2.scad', window.templates.scad);
-            
-            // Add SVG file
+            // Add the SVG file
             zip.file('Clip1.svg', window.templates.svg);
             
-            // Generate Python script with names
-            const namesList = names.map(name => `    "${name}"`).join(',\n');
-            const pyContent = window.templates.python.replace('{{NAMES_LIST}}', namesList);
-            zip.file('generateNames.py', pyContent);
+            // Generate OpenSCAD files for each name
+            names.forEach(name => {
+                const cleanName = name.trim();
+                // Replace the placeholder with the actual name
+                const personalizedScad = window.templates.scad.replace(/name = "[^"]*"/, `name = "${cleanName}"`);
+                zip.file(`${cleanName}_tag.scad`, personalizedScad);
+            });
             
-            // Add README with instructions
-            const readmeContent = window.templates.readme.replace('{{NAMES_COUNT}}', names.length.toString());
+            // Create the Python script content with the names
+            const pythonScript = window.templates.python.replace('{{NAMES_LIST}}', names.map(n => `"${n.trim()}"`).join(', '));
+            zip.file('generateNames.py', pythonScript);
+            
+            // Create the README with personalized content
+            const readmeContent = window.templates.readme
+                .replace('{{NAME_COUNT}}', names.length)
+                .replace('{{NAMES_LIST}}', names.map(n => `- ${n.trim()}_tag.scad`).join('\n'))
+                .replace('{{GENERATED_DATE}}', new Date().toLocaleString());
+            
             zip.file('README.md', readmeContent);
             
             // Generate the ZIP file
-            const zipBlob = await zip.generateAsync({type: 'blob'});
+            zip.generateAsync({type: 'blob'}).then(function(content) {
+                // Create a download link
+                const url = URL.createObjectURL(content);
+                const downloadLink = document.createElement('a');
+                downloadLink.href = url;
+                downloadLink.download = 'wedding-name-tags.zip';
+                
+                // Trigger the download
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                // Clean up
+                URL.revokeObjectURL(url);
+                
+                // Reset the button
+                generateBtn.textContent = 'Generate Name Tags';
+                generateBtn.disabled = false;
+            });
             
-            // Create a download link
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    });
+
+    // Add STL generation button click handler
+    generateSTLBtn.addEventListener('click', async function() {
+        // Double-check validation before proceeding
+        if (!isValid && !validateNames()) {
+            return;
+        }
+        
+        // Get the names from the textarea
+        const names = nameList.value.trim().split('\n').filter(name => name.trim() !== '');
+        
+        // Show processing status
+        const originalText = this.textContent;
+        this.textContent = 'Generating STL files...';
+        this.disabled = true;
+        
+        try {
+            // Determine server URL
+            const serverUrl = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3001' 
+                : ''; // Same origin in production
+            
+            // Call server API
+            const response = await fetch(`${serverUrl}/api/generate-stl`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ names })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.details || error.error || 'Server error');
+            }
+            
+            // Download the ZIP file
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
             const downloadLink = document.createElement('a');
-            downloadLink.href = URL.createObjectURL(zipBlob);
-            downloadLink.download = 'wedding-name-tags.zip';
+            downloadLink.href = url;
+            downloadLink.download = 'wedding-name-tags-stl.zip';
             
             // Trigger the download
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
             
+            // Clean up
+            URL.revokeObjectURL(url);
+            
+            // Show success
+            this.textContent = 'STL Files Generated ✓';
+            this.classList.add('validated');
+            
+            setTimeout(() => {
+                this.textContent = originalText;
+                this.disabled = false;
+                this.classList.remove('validated');
+            }, 3000);
+            
         } catch (error) {
-            console.error('Error:', error);
-            throw error;
+            console.error('Error generating STL files:', error);
+            
+            // Show error with helpful message
+            let errorMessage = 'Error generating STL files';
+            if (error.message.includes('OpenSCAD')) {
+                errorMessage = 'Server error: OpenSCAD not installed';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Server not running. Start with: npm run server';
+            }
+            
+            this.textContent = errorMessage;
+            this.classList.add('error');
+            
+            setTimeout(() => {
+                this.textContent = originalText;
+                this.disabled = false;
+                this.classList.remove('error');
+            }, 5000);
         }
-    }
+    });
+
 });
